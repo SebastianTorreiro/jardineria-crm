@@ -11,7 +11,7 @@ export default function DashboardLayout({
     <div className="flex h-screen flex-col bg-gray-50">
       <main className="flex-1 overflow-y-auto pb-16">{children}</main>
 
-      <nav className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white pb-safe">
+      <nav className="fixed bottom-0 left-0 right-0 border-t border-green-100 bg-white/90 backdrop-blur pb-safe">
         <div className="flex justify-around py-3">
           <Link
             href="/home"
