@@ -9,7 +9,7 @@ export async function getClients(query?: string) {
   const supabase = await createClient()
   
   // Use the robust helper
-  const organizationId = await getUserOrganization()
+  const organizationId = await getUserOrganization(supabase)
   console.log('Server Action - Org ID:', organizationId)
 
   if (!organizationId) {
@@ -43,7 +43,7 @@ export async function getClients(query?: string) {
 export async function createClientAction(formData: FormData) {
   const supabase = await createClient()
   
-  const organizationId = await getUserOrganization()
+  const organizationId = await getUserOrganization(supabase)
   
   if (!organizationId) {
     console.error('createClientAction: No organization found')

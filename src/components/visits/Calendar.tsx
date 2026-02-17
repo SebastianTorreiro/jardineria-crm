@@ -3,21 +3,30 @@
 import { DayPicker } from 'react-day-picker'
 import { es } from 'date-fns/locale'
 import 'react-day-picker/dist/style.css'
-import clsx from 'clsx'
+import { useRouter } from 'next/navigation'
+import { format } from 'date-fns'
 
 interface CalendarProps {
   selectedDate: Date
-  onSelect: (date: Date) => void
   datesWithVisits: Date[]
 }
 
-export function Calendar({ selectedDate, onSelect, datesWithVisits }: CalendarProps) {
+export function Calendar({ selectedDate, datesWithVisits }: CalendarProps) {
+  const router = useRouter()
+
+  const handleSelect = (date: Date | undefined) => {
+    if (date) {
+        const dateStr = format(date, 'yyyy-MM-dd')
+        router.push(`?date=${dateStr}`)
+    }
+  }
+
   return (
     <div className="flex justify-center rounded-xl bg-white p-4 shadow-sm">
       <DayPicker
         mode="single"
         selected={selectedDate}
-        onSelect={(date) => date && onSelect(date)}
+        onSelect={handleSelect}
         locale={es}
         modifiers={{
           hasVisit: datesWithVisits,

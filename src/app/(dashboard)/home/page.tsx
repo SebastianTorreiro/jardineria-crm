@@ -5,7 +5,7 @@ import { getUserOrganization } from '@/utils/supabase/queries'
 
 export default async function HomePage() {
   const supabase = await createClient()
-  const organizationId = await getUserOrganization()
+  const organizationId = await getUserOrganization(supabase)
 
   let visitsToday = 0
   let totalClients = 0

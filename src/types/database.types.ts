@@ -305,7 +305,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      organization_members: {
+        Row: {
+          organization_id: string
+          user_id: string
+          name: string
+          role: string
+        }
+        Insert: {
+          organization_id?: string
+          user_id?: string
+          name?: string
+          role?: string
+        }
+        Update: {
+          organization_id?: string
+          user_id?: string
+          name?: string
+          role?: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
       create_organization_for_user: {

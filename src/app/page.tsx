@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 export const dynamic = 'force-dynamic'
 
 export default async function Index() {
-  const organizationId = await getUserOrganization()
+  const organizationId = await getUserOrganization(supabase)
 
   if (organizationId) {
     redirect('/home')

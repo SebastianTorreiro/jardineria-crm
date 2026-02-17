@@ -1,35 +1,35 @@
+import { SupabaseClient } from '@supabase/supabase-js'
+import { Database } from '@/types/database.types' // O la ruta donde tengas tus tipos
 
-import { createClient } from './server'
-
-export async function getUserOrganization() {
-  const supabase = await createClient()
-
+export const getUserOrganization = async (supabase: SupabaseClient<Database>) => {
   try {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
+    // 1. Obtener el usuario actual
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
     if (userError || !user) {
-      console.error('getUserOrganization: Error getting user', userError)
+      console.error('getUserOrganization: No user found', userError)
       return null
     }
 
-    const { data: membership, error: membershipError } = await supabase
-      .from('memberships')
+    // 2. Buscar en la tabla CORRECTA (organization_members)
+    // Antes esto decía .from('memberships') -> ESO ERA EL ERROR
+    const { data, error } = await supabase
+      .from('organization_members') 
       .select('organization_id')
       .eq('user_id', user.id)
-      .maybeSingle()
+      .single()
 
-    if (membershipError) {
-      console.error(
-        'getUserOrganization: Error fetching membership',
-        membershipError
-      )
+    if (error) {
+      // Si no encuentra fila, no es necesariamente un error crítico, 
+      // significa que el usuario no tiene org todavía.
+      if (error.code !== 'PGRST116') { // PGRST116 es "No rows returned"
+          console.error('getUserOrganization: Error fetching membership', error)
+      }
       return null
     }
 
-    return membership ? membership.organization_id : null
+    return data?.organization_id
+
   } catch (error) {
     console.error('getUserOrganization: Unexpected error', error)
     return null

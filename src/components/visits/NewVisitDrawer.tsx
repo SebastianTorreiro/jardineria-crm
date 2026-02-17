@@ -11,11 +11,15 @@ interface NewVisitDrawerProps {
     defaultDate: Date
 }
 
+import { useRouter } from 'next/navigation'
+// ... imports
+
 export function NewVisitDrawer({ defaultDate }: NewVisitDrawerProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [clients, setClients] = useState<any[]>([])
   const [selectedClientId, setSelectedClientId] = useState<string>('')
+  const router = useRouter()
   
   // Load clients on open (or mount, simpler for now)
   useEffect(() => {
@@ -32,7 +36,8 @@ export function NewVisitDrawer({ defaultDate }: NewVisitDrawerProps) {
   const clientProperties = selectedClient?.properties || []
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault() // Stop default form submit
+    if (loading) return
     setLoading(true)
     const formData = new FormData(event.currentTarget)
     
@@ -45,10 +50,16 @@ export function NewVisitDrawer({ defaultDate }: NewVisitDrawerProps) {
     formData.set('date', fullDateStr)
 
     try {
+      // 1. Call Server Action
       const result = await createVisit(formData)
       if (result.error) {
         alert(result.error)
       } else {
+        // 2. Force Hard Refresh
+        router.refresh()
+        // 3. Small artificial delay to let the UI paint
+        await new Promise(r => setTimeout(r, 500))
+        // 4. Close
         setOpen(false)
         setSelectedClientId('')
       }
@@ -157,12 +168,17 @@ export function NewVisitDrawer({ defaultDate }: NewVisitDrawerProps) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-4 w-full rounded-lg bg-blue-700 px-5 py-3.5 text-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50"
+                  className="mt-4 w-full rounded-lg bg-blue-700 px-5 py-3.5 text-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 flex items-center justify-center"
                 >
-                  {loading ? 'Creando...' : 'Agendar Visita'}
+                  {loading ? (
+                    'Guardando...'
+                  ) : (
+                    'Agendar Visita'
+                  )}
                 </button>
               </form>
             </div>
+
           </div>
         </Drawer.Content>
       </Drawer.Portal>

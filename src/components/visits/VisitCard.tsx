@@ -1,5 +1,6 @@
 import { MapPin, User, Clock } from 'lucide-react'
 import { formatLocalDate } from '@/utils/date-helpers'
+import { CompleteVisitDrawer } from './CompleteVisitDrawer'
 
 interface VisitCardProps {
   visit: any
@@ -12,8 +13,15 @@ export function VisitCard({ visit }: VisitCardProps) {
   // Let's use that for a nice display.
   const dateDisplay = visit.scheduled_date ? formatLocalDate(visit.scheduled_date, 'EEEE d') : '--'
   
+  const isCompleted = visit.status === 'completed'
+  const cardStyle = isCompleted 
+    ? "flex flex-col gap-2 rounded-xl bg-green-50 p-4 shadow-sm border border-green-300 opacity-80"
+    : "flex flex-col gap-2 rounded-xl bg-white p-4 shadow-sm border border-gray-100"
+
+  const [mainNote, closingNote] = visit.notes ? visit.notes.split('[Cierre]:') : [visit.notes, null]
+
   return (
-    <div className="flex flex-col gap-2 rounded-xl bg-white p-4 shadow-sm border border-gray-100">
+    <div className={cardStyle}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Clock size={16} className="text-green-600 font-bold" />
@@ -22,17 +30,26 @@ export function VisitCard({ visit }: VisitCardProps) {
             {dateDisplay}
           </span>
         </div>
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            visit.status === 'completed'
-              ? 'bg-green-100 text-green-800'
-              : visit.status === 'canceled'
-              ? 'bg-red-100 text-red-800'
-              : 'bg-yellow-100 text-yellow-800'
-          }`}
-        >
-          {visit.status === 'pending' ? 'Pendiente' : visit.status}
-        </span>
+
+        {visit.status === 'pending' ? (
+            <CompleteVisitDrawer visit={visit}>
+                <button className="inline-flex items-center rounded-full bg-white px-3 py-1 text-sm font-medium text-green-700 shadow-sm ring-1 ring-inset ring-green-600 hover:bg-green-50">
+                    ✅ Completar
+                </button>
+            </CompleteVisitDrawer>
+        ) : (
+            <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${
+                isCompleted
+                ? 'bg-green-100 text-green-700 text-lg font-bold' // Larger for completed
+                : visit.status === 'canceled'
+                ? 'bg-red-100 text-red-800 text-xs'
+                : 'bg-yellow-100 text-yellow-800 text-xs'
+            }`}
+            >
+            {isCompleted ? `Cobrado: $${visit.real_income ?? '0'}` : visit.status}
+            </span>
+        )}
       </div>
 
       <div>
@@ -41,10 +58,17 @@ export function VisitCard({ visit }: VisitCardProps) {
           <MapPin size={14} />
           <span>{visit.properties?.address}</span>
         </div>
-        {visit.notes && (
+        
+        {mainNote && (
           <p className="mt-2 text-sm text-gray-500 italic">
-            📝 "{visit.notes}"
+            📝 "{mainNote.trim()}"
           </p>
+        )}
+        
+        {closingNote && (
+           <div className="mt-2 p-2 bg-green-100 text-green-800 text-xs rounded border border-green-200">
+             🏁 Cierre: {closingNote.trim()}
+           </div>
         )}
       </div>
     </div>
