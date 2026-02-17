@@ -1,24 +1,15 @@
-
-import { createClient } from '@/utils/supabase/server'
-import { redirect } from 'next/navigation'
 import { getUserOrganization } from '@/utils/supabase/queries'
+import { redirect } from 'next/navigation'
+
+// Forzamos dinamismo para evitar caché viejo
+export const dynamic = 'force-dynamic'
 
 export default async function Index() {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
-
   const organizationId = await getUserOrganization()
 
-  if (!organizationId) {
+  if (organizationId) {
+    redirect('/home')
+  } else {
     redirect('/onboarding')
   }
-
-  redirect('/home')
 }
