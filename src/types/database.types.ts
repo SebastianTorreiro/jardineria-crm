@@ -185,6 +185,7 @@ export type Database = {
           organization_id: string
           name: string
           brand: string | null
+          status: 'available' | 'maintenance' | 'broken'
           purchase_date: string | null
           maintenance_limit_uses: number | null
           current_uses: number | null
@@ -196,6 +197,7 @@ export type Database = {
           organization_id: string
           name: string
           brand?: string | null
+          status?: 'available' | 'maintenance' | 'broken'
           purchase_date?: string | null
           maintenance_limit_uses?: number | null
           current_uses?: number | null
@@ -207,6 +209,7 @@ export type Database = {
           organization_id?: string
           name?: string
           brand?: string | null
+          status?: 'available' | 'maintenance' | 'broken'
           purchase_date?: string | null
           maintenance_limit_uses?: number | null
           current_uses?: number | null
@@ -216,6 +219,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tools_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      supplies: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          current_stock: number
+          min_stock: number
+          unit: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          current_stock?: number
+          min_stock?: number
+          unit?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          name?: string
+          current_stock?: number
+          min_stock?: number
+          unit?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplies_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -338,6 +382,8 @@ export type Database = {
     Enums: {
       visit_status: 'pending' | 'completed' | 'canceled'
       expense_category: 'fuel' | 'equipment' | 'maintenance' | 'other'
+      tool_status: 'available' | 'maintenance' | 'broken'
     }
   }
 }
+

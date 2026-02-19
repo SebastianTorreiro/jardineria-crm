@@ -1,5 +1,5 @@
 
-import { Home, Users, Calendar, DollarSign } from 'lucide-react'
+import { Home, Users, Calendar, DollarSign, Briefcase } from 'lucide-react'
 import Link from 'next/link'
 
 export default function DashboardLayout({
@@ -14,11 +14,11 @@ export default function DashboardLayout({
       <nav className="fixed bottom-0 left-0 right-0 border-t border-green-100 bg-white/90 backdrop-blur pb-safe">
         <div className="flex justify-around py-3">
           <Link
-            href="/home"
+            href="/"
             className="flex flex-col items-center gap-1 text-gray-500 hover:text-green-600"
           >
             <Home className="h-6 w-6" />
-            <span className="text-xs font-medium">Home</span>
+            <span className="text-xs font-medium">Inicio</span>
           </Link>
           <Link
             href="/clients"
@@ -33,6 +33,13 @@ export default function DashboardLayout({
           >
             <Calendar className="h-6 w-6" />
             <span className="text-xs font-medium">Agenda</span>
+          </Link>
+          <Link
+            href="/inventory"
+            className="flex flex-col items-center gap-1 text-gray-500 hover:text-green-600"
+          >
+            <Briefcase className="h-6 w-6" />
+            <span className="text-xs font-medium">Inventario</span>
           </Link>
           <Link
             href="/finances"

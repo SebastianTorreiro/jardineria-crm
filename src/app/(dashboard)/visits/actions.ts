@@ -41,35 +41,44 @@ export async function createVisit(formData: FormData) {
 }
 
 export async function completeVisit(formData: FormData) {
-  const supabase = await createClient()
+  try {
+    const supabase = await createClient()
+    
+    // Validamos organización también aquí por seguridad
+    const organizationId = await getUserOrganization(supabase)
+    if (!organizationId) return { error: 'Unauthorized' }
   
-  // Validamos organización también aquí por seguridad
-  const organizationId = await getUserOrganization(supabase)
-  if (!organizationId) return { error: 'Unauthorized' }
+    const id = formData.get('id') as string
+    const realIncomeRaw = formData.get('real_income')
+    const notes = formData.get('notes') as string
 
-  const id = formData.get('id') as string
-  const realIncome = formData.get('real_income')
-  const notes = formData.get('notes') as string
+    if (!id) return { error: 'Visit ID is required' }
 
-  const { error } = await supabase
-    .from('visits')
-    .update({
-      status: 'completed',
-      real_income: parseFloat(realIncome as string),
-      notes: notes, // Podrías concatenar si quisieras conservar la nota anterior
-      completed_at: new Date().toISOString()
-    })
-    .eq('id', id)
-    .eq('organization_id', organizationId) // Seguridad extra
-
-  if (error) {
-    console.error('Error completing visit:', error)
-    return { error: 'Failed to complete' }
+    const realIncome = realIncomeRaw ? parseFloat(realIncomeRaw as string) : 0
+  
+    const { error } = await supabase
+      .from('visits')
+      .update({
+        status: 'completed',
+        real_income: isNaN(realIncome) ? 0 : realIncome,
+        notes: notes, 
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('organization_id', organizationId) 
+  
+    if (error) {
+      console.error('Error completing visit:', error)
+      return { error: 'Failed to complete' }
+    }
+  
+    revalidatePath('/visits')
+    revalidatePath('/')
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error completing visit:', error)
+    return { error: 'An unexpected error occurred' }
   }
-
-  revalidatePath('/visits')
-  revalidatePath('/')
-  return { success: true }
 }
 
 export async function getVisits(start: Date, end: Date) {
@@ -86,7 +95,15 @@ export async function getVisits(start: Date, end: Date) {
 
   const { data, error } = await supabase
     .from('visits')
-    .select('*')
+    .select(`
+      *,
+      properties (
+        address,
+        clients (
+          name
+        )
+      )
+    `)
     .eq('organization_id', organizationId)
     .gte('scheduled_date', start.toISOString())
     .lte('scheduled_date', end.toISOString())

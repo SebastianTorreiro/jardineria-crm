@@ -13,20 +13,24 @@ interface CompleteVisitDrawerProps {
 export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault() // Stop default form submit
     if (loading) return
     setLoading(true)
+    setError(null)
+    
     const formData = new FormData(event.currentTarget)
-    formData.append('visit_id', visit.id)
+    // FIX: The action expects 'id', not 'visit_id'
+    formData.append('id', visit.id)
 
     try {
       // 1. Call Server Action
       const result = await completeVisit(formData)
       if (result.error) {
-        alert(result.error)
+        setError(result.error)
       } else {
         // 2. Force Hard Refresh
         router.refresh()
@@ -34,11 +38,10 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
         await new Promise(r => setTimeout(r, 500))
         // 4. Close
         setOpen(false)
-        // Ideally show a toast
       }
-    } catch (error) {
-      console.error(error)
-      alert('An unexpected error occurred')
+    } catch (err) {
+      console.error(err)
+      setError('An unexpected error occurred')
     } finally {
       setLoading(false)
     }
@@ -94,6 +97,12 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
                     placeholder="Se usó veneno para hormigas, cliente pidió poda extra la próxima..."
                   />
                 </div>
+
+                {error && (
+                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+                    {error}
+                  </div>
+                )}
 
                 <button
                   type="submit"

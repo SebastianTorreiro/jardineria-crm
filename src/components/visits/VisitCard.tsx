@@ -53,10 +53,10 @@ export function VisitCard({ visit }: VisitCardProps) {
       </div>
 
       <div>
-        <h3 className="font-semibold text-gray-900">{visit.properties?.clients?.name}</h3>
+        <h3 className="font-semibold text-gray-900">{visit.properties?.clients?.name || 'Sin asignar'}</h3>
         <div className="mt-1 flex items-center gap-1 text-sm text-gray-500">
           <MapPin size={14} />
-          <span>{visit.properties?.address}</span>
+          <span>{visit.properties?.address || 'Sin asignar'}</span>
         </div>
         
         {mainNote && (
