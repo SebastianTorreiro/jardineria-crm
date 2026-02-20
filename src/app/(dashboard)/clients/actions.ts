@@ -3,14 +3,15 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserOrganization } from '@/utils/supabase/queries'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
+import { createSafeAction } from '@/lib/safe-action'
+import { ClientSchema, PropertySchema, ClientInput, PropertyInput } from '@/lib/validations/schemas'
+import { z } from 'zod'
+
+export type Client = ClientInput & { id: string, org_id: string }
 
 export async function getClients(query?: string) {
   const supabase = await createClient()
-  
-  // Use the robust helper
   const organizationId = await getUserOrganization(supabase)
-  console.log('Server Action - Org ID:', organizationId)
 
   if (!organizationId) {
     console.error('getClients: No organization found for user')
@@ -40,59 +41,55 @@ export async function getClients(query?: string) {
   return data
 }
 
-export async function createClientAction(formData: FormData) {
-  const supabase = await createClient()
-  
-  const organizationId = await getUserOrganization(supabase)
-  
-  if (!organizationId) {
-    console.error('createClientAction: No organization found')
-    throw new Error('No organization found')
-  }
+export const createClientAction = createSafeAction(
+  ClientSchema.extend({
+      // Extra fields for the property creation in the same transaction logic if needed
+      // But the schema matches the form input.
+      // Wait, the original action also mapped properties.
+      // The prompt said "createClientAction" takes name, phone, address, frequency.
+      // So we need a combined schema or just extend it here.
+      address: z.string().trim().min(1, { message: "Address is required" }),
+      frequency: z.coerce.number().int().positive().nullable().optional(),
+  }), 
+  async (data, ctx) => {
+    // 1. Create Client
+    const { data: client, error: clientError } = await ctx.supabase
+        .from('clients')
+        .insert({
+        organization_id: ctx.orgId,
+        name: data.name,
+        phone: data.phone,
+        email: data.email, // Added email if schema has it, or removal if not? Schema has email. 
+                        // The original action didn't insert email? 
+                        // Original: name, phone. 
+                        // Let's stick to original logic plus email if available in schema/form.
+        })
+        .select()
+        .single()
 
-  const name = formData.get('name') as string
-  const phone = formData.get('phone') as string
-  const address = formData.get('address') as string
-  const frequency = formData.get('frequency') as string
+    if (clientError) {
+        console.error('Error creating client:', clientError)
+        return { success: false, message: 'Failed to create client' }
+    }
 
-  if (!name || !address) {
-    return { error: 'Name and Address are required' }
-  }
-
-  // 1. Create Client
-  const { data: client, error: clientError } = await supabase
-    .from('clients')
-    .insert({
-      organization_id: organizationId,
-      name,
-      phone,
+    // 2. Create Property
+    const { error: propertyError } = await ctx.supabase.from('properties').insert({
+        organization_id: ctx.orgId,
+        client_id: client.id,
+        address: data.address,
+        frequency_days: data.frequency,
     })
-    .select()
-    .single()
 
-  if (clientError) {
-    console.error('Error creating client:', JSON.stringify(clientError, null, 2))
-    return { error: 'Failed to create client' }
-  }
+    if (propertyError) {
+        // Rollback
+        await ctx.supabase.from('clients').delete().eq('id', client.id)
+        console.error('Error creating property:', propertyError)
+        return { success: false, message: 'Failed to create property' }
+    }
 
-  // 2. Create Property for the Client
-  const { error: propertyError } = await supabase.from('properties').insert({
-    organization_id: organizationId,
-    client_id: client.id,
-    address,
-    frequency_days: frequency ? parseInt(frequency) : null,
-  })
-
-  if (propertyError) {
-    console.error('Error creating property:', JSON.stringify(propertyError, null, 2))
-    // Optional: Delete the client if property creation fails (manual rollback)
-    await supabase.from('clients').delete().eq('id', client.id)
-    return { error: 'Failed to create property' }
-  }
-
-  revalidatePath('/clients')
-  return { success: true }
-}
+    revalidatePath('/clients')
+    return { success: true, message: 'Client created successfully' }
+})
 
 export async function getClientDetails(clientId: string) {
   const supabase = await createClient()
@@ -121,28 +118,6 @@ export async function getClientDetails(clientId: string) {
     .eq('organization_id', organizationId)
 
   // 3. Get Visits (History)
-  const { data: visits } = await supabase
-    .from('visits')
-    .select(`
-      *,
-      properties (
-        address
-      )
-    `)
-    // We can't filter by client_id directly on visits easily without a join or if we don't have client_id on visits
-    // But visits are linked to properties, which are linked to clients.
-    // So we need to filter visits where property.client_id = clientId.
-    // Supabase supports this via nested filtering!
-    .eq('organization_id', organizationId)
-    .eq('properties.client_id', clientId) 
-    .order('scheduled_date', { ascending: false })
-
-  // Note: .eq('properties.client_id', clientId) works if we join!
-  // But strictly standard is:
-  // .select('*, properties!inner(*)')
-  // .eq('properties.client_id', clientId)
-
-  // Let's retry the visits query with referencing inner join to be safe
   const { data: visitsSafe, error: visitsError } = await supabase
      .from('visits')
      .select(`
@@ -163,65 +138,43 @@ export async function getClientDetails(clientId: string) {
   }
 }
 
-export async function updateClient(formData: FormData) {
-    const supabase = await createClient()
-    const organizationId = await getUserOrganization(supabase)
-    
-    if (!organizationId) return { error: 'Unauthorized' }
+const UpdateClientSchema = ClientSchema.extend({
+    id: z.string().uuid()
+})
 
-    const id = formData.get('id') as string
-    const name = formData.get('name') as string
-    const phone = formData.get('phone') as string
-    const email = formData.get('email') as string
-    const notes = formData.get('notes') as string
-
-    const { error } = await supabase
+export const updateClient = createSafeAction(UpdateClientSchema, async (data, ctx) => {
+    const { error } = await ctx.supabase
         .from('clients')
         .update({
-            name,
-            phone,
-            email,
-            notes
+            name: data.name,
+            phone: data.phone,
+            email: data.email,
+            notes: data.notes
         })
-        .eq('id', id)
-        .eq('organization_id', organizationId)
+        .eq('id', data.id)
+        .eq('organization_id', ctx.orgId)
 
-    if (error) {
-        console.error('Error updating client:', error)
-        return { error: 'Failed to update client' }
-    }
+    if (error) throw error
 
-    revalidatePath(`/clients/${id}`)
+    revalidatePath(`/clients/${data.id}`)
     revalidatePath('/clients')
-    return { success: true }
-}
+    return { success: true, message: 'Client updated' }
+})
 
-export async function createProperty(formData: FormData) {
-    const supabase = await createClient()
-    const organizationId = await getUserOrganization(supabase)
+const CreatePropertySchema = PropertySchema.extend({
+    client_id: z.string().uuid()
+})
 
-    if (!organizationId) return { error: 'Unauthorized' }
-
-    const clientId = formData.get('client_id') as string
-    const address = formData.get('address') as string
-    const frequency = formData.get('frequency') as string
-
-    if (!clientId || !address) {
-        return { error: 'Address is required' }
-    }
-
-    const { error } = await supabase.from('properties').insert({
-        organization_id: organizationId,
-        client_id: clientId,
-        address,
-        frequency_days: frequency ? parseInt(frequency) : null,
+export const createProperty = createSafeAction(CreatePropertySchema, async (data, ctx) => {
+    const { error } = await ctx.supabase.from('properties').insert({
+        organization_id: ctx.orgId,
+        client_id: data.client_id,
+        address: data.address,
+        frequency_days: data.frequency,
     })
 
-    if (error) {
-        console.error('Error creating property:', error)
-        return { error: 'Failed to create property' }
-    }
+    if (error) throw error
 
-    revalidatePath(`/clients/${clientId}`)
-    return { success: true }
-}
+    revalidatePath(`/clients/${data.client_id}`)
+    return { success: true, message: 'Property created' }
+})

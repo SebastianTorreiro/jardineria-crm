@@ -3,25 +3,14 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserOrganization } from '@/utils/supabase/queries'
 import { revalidatePath } from 'next/cache'
+import { createSafeAction } from '@/lib/safe-action'
+import { ToolSchema, SupplySchema, ToolInput, SupplyInput } from '@/lib/validations/schemas'
+import { Database } from '@/types/database.types'
+import { z } from 'zod'
 
-// --- INTERFACES ---
-
-export interface Tool {
-  id: string
-  name: string
-  brand: string | null
-  status: 'ok' | 'service' | 'broken'
-  org_id: string
-}
-
-export interface Supply {
-  id: string
-  name: string
-  current_stock: number
-  min_stock: number
-  unit: string
-  org_id: string
-}
+// --- INTERFACES (Mapped from Schema) ---
+export type Tool = ToolInput & { id: string, org_id: string }
+export type Supply = SupplyInput & { id: string, org_id: string }
 
 // --- TOOLS ---
 
@@ -49,7 +38,7 @@ export async function getTools(query?: string): Promise<Tool[]> {
   }
 
   // Map database fields to interface
-  return (data || []).map((item: any) => ({
+  return (data || []).map((item) => ({
     id: item.id,
     name: item.name,
     brand: item.brand,
@@ -58,6 +47,7 @@ export async function getTools(query?: string): Promise<Tool[]> {
   }))
 }
 
+// Mappers
 function mapDbStatusToToolStatus(dbStatus: string): 'ok' | 'service' | 'broken' {
     switch (dbStatus) {
         case 'available': return 'ok'
@@ -67,71 +57,54 @@ function mapDbStatusToToolStatus(dbStatus: string): 'ok' | 'service' | 'broken' 
     }
 }
 
-function mapToolStatusToDbStatus(status: 'ok' | 'service' | 'broken'): 'available' | 'maintenance' | 'broken' {
+function mapToolStatusToDbStatus(status: string): 'available' | 'maintenance' | 'broken' {
     switch (status) {
         case 'ok': return 'available'
         case 'service': return 'maintenance'
         case 'broken': return 'broken'
+        case 'available': return 'available'
+        case 'maintenance': return 'maintenance'
         default: return 'available'
     }
 }
 
-export async function createTool(formData: FormData) {
-  const supabase = await createClient()
-  const organizationId = await getUserOrganization(supabase)
-  
-  if (!organizationId) {
-      return { error: 'Organization not found' }
-  }
+// Actions
+export const createTool = createSafeAction(ToolSchema, async (data, ctx) => {
+    const dbStatus = mapToolStatusToDbStatus(data.status)
+    
+    const { error } = await ctx.supabase.from('tools').insert({
+        organization_id: ctx.orgId,
+        name: data.name,
+        brand: data.brand,
+        status: dbStatus
+    })
 
-  const name = formData.get('name') as string
-  const brand = formData.get('brand') as string
-  const rawStatus = formData.get('status') as string
-  
-  // Map input status to DB status
-  let dbStatus: 'available' | 'maintenance' | 'broken' = 'available'
-  if (rawStatus === 'ok' || rawStatus === 'available') dbStatus = 'available'
-  else if (rawStatus === 'service' || rawStatus === 'maintenance') dbStatus = 'maintenance'
-  else if (rawStatus === 'broken') dbStatus = 'broken'
+    if (error) throw error
 
-  if (!name) {
-    return { error: 'Name is required' }
-  }
+    revalidatePath('/inventory')
+    return { success: true, message: 'Tool created successfully' }
+})
 
-  const { error } = await supabase.from('tools').insert({
-    organization_id: organizationId,
-    name,
-    brand,
-    status: dbStatus,
-  })
+const UpdateToolStatusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(['ok', 'service', 'broken', 'available', 'maintenance'])
+})
 
-  if (error) {
-    console.error('Error creating tool:', error)
-    return { error: 'Failed to create tool' }
-  }
+export const updateToolStatus = createSafeAction(UpdateToolStatusSchema, async (data, ctx) => {
+    const dbStatus = mapToolStatusToDbStatus(data.status)
 
-  revalidatePath('/inventory')
-  return { success: true }
-}
+    const { error } = await ctx.supabase
+        .from('tools')
+        .update({ status: dbStatus })
+        .eq('id', data.id)
+        .eq('organization_id', ctx.orgId) // Security check
 
-export async function updateToolStatus(id: string, status: 'ok' | 'service' | 'broken') {
-  const supabase = await createClient()
-  
-  const dbStatus = mapToolStatusToDbStatus(status)
+    if (error) throw error
 
-  const { error } = await supabase
-    .from('tools')
-    .update({ status: dbStatus })
-    .eq('id', id)
+    revalidatePath('/inventory')
+    return { success: true, message: 'Status updated' }
+})
 
-  if (error) {
-    console.error('Error updating tool status:', error)
-    return { error: 'Failed to update tool status' }
-  }
-
-  revalidatePath('/inventory')
-  return { success: true }
-}
 
 // --- SUPPLIES ---
 
@@ -158,7 +131,7 @@ export async function getSupplies(query?: string): Promise<Supply[]> {
       return []
     }
   
-    return (data || []).map((item: any) => ({
+    return (data || []).map((item) => ({
         id: item.id,
         name: item.name,
         current_stock: item.current_stock,
@@ -166,55 +139,38 @@ export async function getSupplies(query?: string): Promise<Supply[]> {
         unit: item.unit,
         org_id: item.organization_id
     }))
-  }
+}
 
-export async function createSupply(formData: FormData) {
-    const supabase = await createClient()
-    const organizationId = await getUserOrganization(supabase)
-    
-    if (!organizationId) {
-        return { error: 'Organization not found' }
-    }
-  
-    const name = formData.get('name') as string
-    const current_stock = parseInt(formData.get('current_stock') as string)
-    const min_stock = parseInt(formData.get('min_stock') as string)
-    const unit = formData.get('unit') as string
-  
-    if (!name) {
-      return { error: 'Name is required' }
-    }
-  
-    const { error } = await supabase.from('supplies').insert({
-      organization_id: organizationId,
-      name,
-      current_stock: isNaN(current_stock) ? 0 : current_stock,
-      min_stock: isNaN(min_stock) ? 0 : min_stock,
-      unit: unit || 'units',
+export const createSupply = createSafeAction(SupplySchema, async (data, ctx) => {
+    const { error } = await ctx.supabase.from('supplies').insert({
+        organization_id: ctx.orgId,
+        name: data.name,
+        current_stock: data.current_stock,
+        min_stock: data.min_stock,
+        unit: data.unit
     })
-  
-    if (error) {
-      console.error('Error creating supply:', error)
-      return { error: 'Failed to create supply' }
-    }
-  
-    revalidatePath('/inventory')
-    return { success: true }
-  }
 
-  export async function updateSupplyStock(id: string, quantity: number) {
-    const supabase = await createClient()
-    
-    const { error } = await supabase
-      .from('supplies')
-      .update({ current_stock: quantity })
-      .eq('id', id)
-  
-    if (error) {
-      console.error('Error updating supply stock:', error)
-      return { error: 'Failed to update stock' }
-    }
-  
+    if (error) throw error
+
     revalidatePath('/inventory')
-    return { success: true }
-  }
+    return { success: true, message: 'Supply created successfully' }
+})
+
+const UpdateSupplyStockSchema = z.object({
+    id: z.string().uuid(),
+    quantity: z.coerce.number().int().min(0)
+})
+
+export const updateSupplyStock = createSafeAction(UpdateSupplyStockSchema, async (data, ctx) => {
+    const { error } = await ctx.supabase
+        .from('supplies')
+        .update({ current_stock: data.quantity })
+        .eq('id', data.id)
+        .eq('organization_id', ctx.orgId)
+
+    if (error) throw error
+
+    revalidatePath('/inventory')
+    return { success: true, message: 'Stock updated' }
+})
+

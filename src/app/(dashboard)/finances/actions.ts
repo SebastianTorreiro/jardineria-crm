@@ -3,80 +3,35 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { startOfMonth, endOfMonth, setMonth, setYear, format } from 'date-fns'
+import { Database } from '@/types/database.types'
+import { createSafeAction } from '@/lib/safe-action'
+import { ExpenseSchema, ExpenseInput } from '@/lib/validations/schemas'
+import { getUserOrganization } from '@/utils/supabase/queries'
 
-export async function createExpense(formData: FormData) {
-  const supabase = await createClient()
+export type Expense = ExpenseInput & { id: string, org_id: string }
 
-  // Get current user and organization
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { error: 'Usuario no autenticado' }
-  }
-
-  // Get organization_id (assuming single org for now, or fetch from DB)
-  // We can query the organization_members table
-  const { data: membership } = await supabase
-    .from('organization_members')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!membership) {
-    return { error: 'No perteneces a ninguna organización' }
-  }
-
-  const description = formData.get('description') as string
-  const amount = parseFloat(formData.get('amount') as string)
-  const date = formData.get('date') as string // YYYY-MM-DD
-  const category = formData.get('category') as string
-
-  if (!description || !amount || !date || !category) {
-    return { error: 'Faltan campos obligatorios' }
-  }
-
-  const { error } = await supabase.from('expenses').insert({
-    description,
-    amount,
-    date,
-    category,
-    organization_id: membership.organization_id,
+export const createExpense = createSafeAction(ExpenseSchema, async (data, ctx) => {
+  const { error } = await ctx.supabase.from('expenses').insert({
+    description: data.description,
+    amount: data.amount,
+    date: data.date,
+    category: data.category as Database['public']['Enums']['expense_category'],
+    organization_id: ctx.orgId,
   })
 
-  if (error) {
-    console.error('createExpense Error:', error)
-    return { error: 'Error al crear el gasto' }
-  }
+  if (error) throw error
 
   revalidatePath('/finances')
-  return { success: true }
-}
+  return { success: true, message: 'Gasto registrado correctamente' }
+})
 
 export async function getFinancialSummary(month: number, year: number) {
   const supabase = await createClient()
-  
-  // Get organization
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  
-  if (!user) return null
+  const orgId = await getUserOrganization(supabase)
 
-  const { data: membership } = await supabase
-    .from('organization_members')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .single()
-    
-  if (!membership) return null
-  const orgId = membership.organization_id
+  if (!orgId) return null
 
   // Calculate Date Range
-  // month is 0-indexed (0 = Jan) or 1-indexed? Usually in UI we assume 0..11 for JS Date, but lets standardize.
-  // Let's assume input 'month' is 0-11 to match Date types, OR 1-12. 
-  // Let's assume standard JS DategetMonth() (0-11).
   const baseDate = setYear(setMonth(new Date(), month), year)
   const startDate = startOfMonth(baseDate)
   const endDate = endOfMonth(baseDate)
@@ -85,7 +40,6 @@ export async function getFinancialSummary(month: number, year: number) {
   const endIso = format(endDate, 'yyyy-MM-dd')
 
   // 1. Get Income (Visits completed in this range)
-  // Logic: Sum real_income
   const { data: visits, error: visitsError } = await supabase
     .from('visits')
     .select('real_income')
@@ -125,20 +79,9 @@ export async function getFinancialSummary(month: number, year: number) {
 
 export async function getExpenses(month: number, year: number) {
   const supabase = await createClient()
+  const orgId = await getUserOrganization(supabase)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  
-  if (!user) return []
-
-  const { data: membership } = await supabase
-    .from('organization_members')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .single()
-    
-  if (!membership) return []
+  if (!orgId) return []
 
   const baseDate = setYear(setMonth(new Date(), month), year)
   const startDate = startOfMonth(baseDate)
@@ -150,7 +93,7 @@ export async function getExpenses(month: number, year: number) {
   const { data, error } = await supabase
     .from('expenses')
     .select('*')
-    .eq('organization_id', membership.organization_id)
+    .eq('organization_id', orgId)
     .gte('date', startIso)
     .lte('date', endIso)
     .order('date', { ascending: false })
