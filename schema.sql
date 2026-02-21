@@ -157,6 +157,7 @@ CREATE TABLE expenses (
     category expense_category NOT NULL,
     date DATE NOT NULL DEFAULT CURRENT_DATE,
     description TEXT,
+    visit_id UUID REFERENCES visits(id) ON DELETE SET NULL, -- Link expense to a specific visit
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -164,6 +165,7 @@ CREATE TABLE expenses (
 -- Indexes
 CREATE INDEX idx_expenses_organization_id ON expenses(organization_id);
 CREATE INDEX idx_expenses_date ON expenses(date);
+CREATE INDEX idx_expenses_visit_id ON expenses(visit_id);
 
 -- RLS
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
@@ -190,8 +192,95 @@ CREATE INDEX idx_memberships_user_id ON memberships(user_id);
 ALTER TABLE memberships ENABLE ROW LEVEL SECURITY;
 
 --------------------------------------------------------------------------------
--- 8. RPC Functions
+-- 8. Workers & Attendance
 --------------------------------------------------------------------------------
+CREATE TABLE workers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    is_partner BOOLEAN DEFAULT FALSE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    daily_wage NUMERIC(15, 2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_workers_organization_id ON workers(organization_id);
+ALTER TABLE workers ENABLE ROW LEVEL SECURITY;
+
+CREATE TRIGGER update_workers_updated_at
+    BEFORE UPDATE ON workers
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE visit_attendance (
+    visit_id UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE,
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    PRIMARY KEY (visit_id, worker_id)
+);
+
+CREATE INDEX idx_visit_attendance_visit_id ON visit_attendance(visit_id);
+CREATE INDEX idx_visit_attendance_worker_id ON visit_attendance(worker_id);
+ALTER TABLE visit_attendance ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE payouts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    visit_id UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE,
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    amount NUMERIC(12, 2) NOT NULL,
+    share_percentage NUMERIC(5, 2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(visit_id, worker_id)
+);
+
+CREATE INDEX idx_payouts_visit_id ON payouts(visit_id);
+CREATE INDEX idx_payouts_worker_id ON payouts(worker_id);
+ALTER TABLE payouts ENABLE ROW LEVEL SECURITY;
+
+--------------------------------------------------------------------------------
+-- 9. RPC Functions
+--------------------------------------------------------------------------------
+
+-- Complete Visit with Attendance and Payouts (Transactional)
+CREATE OR REPLACE FUNCTION complete_visit_v2(
+    p_visit_id UUID,
+    p_real_income NUMERIC,
+    p_notes TEXT,
+    p_worker_ids UUID[],
+    p_payouts JSONB -- Array of {worker_id, amount, share_percentage}
+)
+RETURNS VOID AS $$
+DECLARE
+    v_payout JSONB;
+BEGIN
+    -- 1. Update Visit
+    UPDATE visits
+    SET 
+        status = 'completed',
+        real_income = p_real_income,
+        notes = p_notes,
+        updated_at = NOW()
+    WHERE id = p_visit_id;
+
+    -- 2. Insert Attendance
+    DELETE FROM visit_attendance WHERE visit_id = p_visit_id;
+    INSERT INTO visit_attendance (visit_id, worker_id)
+    SELECT p_visit_id, unnest(p_worker_ids);
+
+    -- 3. Insert Payouts
+    DELETE FROM payouts WHERE visit_id = p_visit_id;
+    FOR v_payout IN SELECT * FROM jsonb_array_elements(p_payouts)
+    LOOP
+        INSERT INTO payouts (visit_id, worker_id, amount, share_percentage)
+        VALUES (
+            p_visit_id, 
+            (v_payout->>'worker_id')::UUID, 
+            (v_payout->>'amount')::NUMERIC, 
+            (v_payout->>'share_percentage')::NUMERIC
+        );
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to create an organization and link the current user as owner
 CREATE OR REPLACE FUNCTION create_organization_for_user(org_name TEXT)
