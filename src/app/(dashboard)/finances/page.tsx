@@ -1,7 +1,8 @@
-import { getFinancialSummary, getExpenses } from './actions'
+import { getFinancialSummary, getExpenses, getProfitDistributionSummary } from './actions'
 import { SummaryCard } from '@/components/finances/SummaryCard'
 import { ExpenseList } from '@/components/finances/ExpenseList'
 import { NewExpenseDrawer } from '@/components/finances/NewExpenseDrawer'
+import { ProfitDistribution } from '@/components/finances/ProfitDistribution'
 import { format, subMonths, addMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Link from 'next/link'
@@ -31,9 +32,10 @@ export default async function FinancesPage({ searchParams }: PageProps) {
   const currentDate = new Date(selectedYear, selectedMonth, 1)
 
   // Fetch Data in Parallel
-  const [summary, expenses] = await Promise.all([
+  const [summary, expenses, distribution] = await Promise.all([
     getFinancialSummary(selectedMonth, selectedYear),
-    getExpenses(selectedMonth, selectedYear)
+    getExpenses(selectedMonth, selectedYear),
+    getProfitDistributionSummary(selectedMonth, selectedYear)
   ])
 
   // Navigation Links
@@ -44,20 +46,20 @@ export default async function FinancesPage({ searchParams }: PageProps) {
   const nextLink = `/finances?month=${nextDate.getMonth()}&year=${nextDate.getFullYear()}`
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 pb-20">
+    <div className="flex min-h-screen flex-col bg-slate-50 pb-20">
       <div className="p-4 max-w-7xl mx-auto w-full">
         {/* Header with Navigation */}
-        <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Finanzas</h1>
+        <div className="mb-8 flex items-center justify-between">
+            <h1 className="text-3xl font-black text-emerald-950 tracking-tight">Finanzas</h1>
             
-            <div className="flex items-center gap-2 bg-white rounded-lg p-1 shadow-sm border border-gray-200">
-                <Link href={prevLink} className="p-2 hover:bg-gray-50 rounded-md text-gray-600">
+            <div className="flex items-center gap-2 bg-white rounded-xl p-1.5 shadow-sm border border-slate-200">
+                <Link href={prevLink} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 hover:text-emerald-600 transition-colors">
                     <ChevronLeft size={20} />
                 </Link>
-                <span className="w-32 text-center font-medium text-gray-900 capitalize">
+                <span className="w-36 text-center text-sm font-bold text-emerald-900 capitalize">
                     {format(currentDate, 'MMMM yyyy', { locale: es })}
                 </span>
-                <Link href={nextLink} className="p-2 hover:bg-gray-50 rounded-md text-gray-600">
+                <Link href={nextLink} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 hover:text-emerald-600 transition-colors">
                     <ChevronRight size={20} />
                 </Link>
             </div>
@@ -66,8 +68,13 @@ export default async function FinancesPage({ searchParams }: PageProps) {
         {/* Summary Cards */}
         <SummaryCard summary={summary} />
 
+        {/* Profit Distribution */}
+        <ProfitDistribution summary={distribution} />
+
         {/* Expense List */}
-        <ExpenseList expenses={expenses || []} />
+        <div className="mt-8">
+            <ExpenseList expenses={expenses || []} />
+        </div>
       </div>
 
       <NewExpenseDrawer />

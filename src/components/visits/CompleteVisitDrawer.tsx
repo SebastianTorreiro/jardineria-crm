@@ -1,9 +1,13 @@
-'use client'
-
 import { Drawer } from 'vaul'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { completeVisit } from '@/app/(dashboard)/visits/actions'
+import { completeVisit, previewVisitProfit } from '@/app/(dashboard)/visits/actions'
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
 interface CompleteVisitDrawerProps {
   visit: any
@@ -14,29 +18,67 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [workers, setWorkers] = useState<any[]>([])
+  const [selectedWorkers, setSelectedWorkers] = useState<string[]>([])
+  const [realIncome, setRealIncome] = useState<string>('')
+  const [preview, setPreview] = useState<any[]>([])
   const router = useRouter()
 
+  // Fetch workers when opening
+  async function handleOpenChange(newOpen: boolean) {
+    setOpen(newOpen)
+    if (newOpen && workers.length === 0) {
+      const { getWorkers } = await import('@/app/(dashboard)/visits/actions')
+      const data = await getWorkers()
+      setWorkers(data)
+      const partnerIds = data.filter(w => w.is_partner).map(w => w.id)
+      setSelectedWorkers(partnerIds)
+    }
+  }
+
+  // Update preview when inputs change
+  useEffect(() => {
+    if (selectedWorkers.length > 0) {
+        const incomeValue = parseFloat(realIncome) || 0
+        previewVisitProfit(visit.id, incomeValue, selectedWorkers).then(setPreview)
+    } else {
+        setPreview([])
+    }
+  }, [realIncome, selectedWorkers, visit.id])
+
+  function toggleWorker(id: string) {
+    setSelectedWorkers(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault() // Stop default form submit
+    event.preventDefault()
     if (loading) return
+    
+    if (selectedWorkers.length === 0) {
+        setError('Selecciona al menos un trabajador')
+        return
+    }
+
     setLoading(true)
     setError(null)
     
     const formData = new FormData(event.currentTarget)
-    // FIX: The action expects 'id', not 'visit_id'
-    formData.append('id', visit.id)
+    const data = {
+        id: visit.id,
+        real_income: parseFloat(realIncome) || 0,
+        notes: (formData.get('notes') as string) || '',
+        worker_ids: selectedWorkers
+    }
 
     try {
-      // 1. Call Server Action
-      const result = await completeVisit(formData)
-      if (result.error) {
-        setError(result.error)
+      const result = await completeVisit(data)
+      if (!result.success) {
+        setError(result.message || 'Error al completar la visita')
       } else {
-        // 2. Force Hard Refresh
         router.refresh()
-        // 3. Small artificial delay to let the UI paint
         await new Promise(r => setTimeout(r, 500))
-        // 4. Close
         setOpen(false)
       }
     } catch (err) {
@@ -48,58 +90,111 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
   }
 
   return (
-    <Drawer.Root open={open} onOpenChange={setOpen}>
+    <Drawer.Root open={open} onOpenChange={handleOpenChange}>
       <Drawer.Trigger asChild>
         {children}
       </Drawer.Trigger>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-        <Drawer.Content className="fixed bottom-0 left-0 right-0 mt-24 flex h-[80%] flex-col rounded-t-[10px] bg-zinc-100 outline-none">
-          <div className="flex-1 overflow-y-auto rounded-t-[10px] bg-white p-4">
-            <div className="mx-auto mb-8 h-1.5 w-12 flex-shrink-0 rounded-full bg-zinc-300" />
+        <Drawer.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+        <Drawer.Content className="fixed bottom-0 left-0 right-0 mt-24 flex h-[90%] flex-col rounded-t-[24px] bg-slate-50 outline-none border-t border-slate-200">
+          <div className="flex-1 overflow-y-auto rounded-t-[24px] bg-white p-6 shadow-2xl">
+            <div className="mx-auto mb-6 h-1 w-12 flex-shrink-0 rounded-full bg-slate-200" />
             <div className="mx-auto max-w-md">
-              <Drawer.Title className="mb-4 text-xl font-bold">
+              <Drawer.Title className="mb-6 text-2xl font-bold text-emerald-900 tracking-tight text-center">
                 Completar Trabajo
               </Drawer.Title>
               
-              <div className="mb-6 rounded-lg bg-gray-50 p-4 border border-gray-100">
-                <p className="text-sm text-gray-500">Cliente</p>
-                <p className="font-medium text-gray-900">{visit.properties?.clients?.name}</p>
-                <p className="mt-1 text-sm text-gray-500">{visit.properties?.address}</p>
+              <div className="mb-8 rounded-2xl bg-emerald-50/50 p-5 border border-emerald-100/50">
+                <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-700/70">Cliente</p>
+                </div>
+                <p className="text-lg font-bold text-emerald-950 leading-tight">{visit.properties?.clients?.name}</p>
+                <p className="mt-1 text-sm text-emerald-700 font-medium opacity-80">{visit.properties?.address}</p>
               </div>
 
-              <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                <div>
-                  <label htmlFor="real_income" className="mb-2 block text-sm font-medium text-gray-700">
-                    Ingreso Real ($)
+              <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+                <div className="space-y-4">
+                  <label className="block text-sm font-bold text-emerald-900 uppercase tracking-wider ml-1">
+                    ¿Quiénes asistieron?
                   </label>
-                  <input
-                    type="number"
-                    name="real_income"
-                    id="real_income"
-                    required
-                    autoFocus
-                    step="0.01"
-                    className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-4 text-3xl font-bold text-center text-gray-900 focus:border-green-500 focus:ring-green-500"
-                    placeholder="0.00"
-                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    {workers.map(worker => (
+                        <button
+                            key={worker.id}
+                            type="button"
+                            onClick={() => toggleWorker(worker.id)}
+                            className={cn(
+                                "flex items-center justify-center p-4 rounded-xl border text-sm font-bold transition-all duration-200 shadow-sm",
+                                selectedWorkers.includes(worker.id)
+                                    ? "bg-emerald-600 border-emerald-600 text-white ring-4 ring-emerald-500/10 scale-[1.02]"
+                                    : "bg-white border-slate-200 text-emerald-900 hover:border-emerald-200 hover:bg-emerald-50/30"
+                            )}
+                        >
+                            {worker.name}
+                        </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div>
-                  <label htmlFor="notes" className="mb-2 block text-sm font-medium text-gray-700">
-                    Observaciones finales
+                <div className="space-y-2">
+                  <label htmlFor="real_income" className="block text-sm font-bold text-emerald-900 uppercase tracking-wider ml-1">
+                    Ingreso Real
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-3xl font-bold text-emerald-600/50">$</span>
+                    <input
+                        type="number"
+                        name="real_income"
+                        id="real_income"
+                        required
+                        autoFocus
+                        step="0.01"
+                        value={realIncome}
+                        onChange={(e) => setRealIncome(e.target.value)}
+                        className="block w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-6 pl-12 text-4xl font-black text-emerald-950 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
+                        placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                {/* Breakdown Preview */}
+                {preview.length > 0 && (
+                    <div className="space-y-3 p-5 rounded-2xl bg-emerald-50/30 border border-emerald-100/50">
+                        <p className="text-xs font-bold text-emerald-700/70 uppercase tracking-widest ml-1 mb-2">Desglose de Ganancias</p>
+                        <div className="flex flex-wrap gap-2">
+                            {preview.map((p) => (
+                                <div 
+                                    key={p.worker_id}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-emerald-100 shadow-sm"
+                                >
+                                    <span className="text-sm font-bold text-emerald-900">{p.worker_name}</span>
+                                    <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">
+                                        {p.share_percentage > 0 ? `${p.share_percentage}%` : 'Sueldo'}
+                                    </span>
+                                    <span className="text-sm font-black text-emerald-950">
+                                        ${p.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <div className="space-y-2">
+                  <label htmlFor="notes" className="block text-sm font-bold text-emerald-900 uppercase tracking-wider ml-1">
+                    Notas de la visita
                   </label>
                   <textarea
                     name="notes"
                     id="notes"
-                    rows={4}
-                    className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 focus:border-green-500 focus:ring-green-500"
-                    placeholder="Se usó veneno para hormigas, cliente pidió poda extra la próxima..."
+                    rows={3}
+                    className="block w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-emerald-950 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"
+                    placeholder="Detalles importantes..."
                   />
                 </div>
 
                 {error && (
-                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+                  <div className="rounded-xl bg-red-50 p-4 text-sm font-bold text-red-600 border border-red-100 animate-shake">
                     {error}
                   </div>
                 )}
@@ -107,9 +202,9 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-2 w-full rounded-lg bg-green-600 px-5 py-4 text-center text-lg font-bold text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:opacity-50"
+                  className="mt-2 w-full rounded-2xl bg-emerald-600 px-6 py-5 text-center text-xl font-black text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50"
                 >
-                  {loading ? 'Guardando...' : 'Confirmar y Cobrar'}
+                  {loading ? 'Guardando...' : 'Finalizar y Cobrar'}
                 </button>
               </form>
             </div>
