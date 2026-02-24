@@ -47,7 +47,7 @@ export function VisitCard({ visit }: VisitCardProps) {
                 : 'bg-yellow-100 text-yellow-800 text-xs'
             }`}
             >
-            {isCompleted ? `Cobrado: $${visit.real_income ?? '0'}` : visit.status}
+            {isCompleted ? `Cobrado: $${visit.total_price ?? '0'}` : visit.status}
             </span>
         )}
       </div>

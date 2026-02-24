@@ -31,11 +31,11 @@ export function createSafeAction<TInput, TOutput>(
 
     // Case 1: Called from useActionState (prevState, formData)
     if (formData instanceof FormData) {
-        inputData = Object.fromEntries(formData.entries());
+        inputData = Object.fromEntries(formData);
     }
     // Case 2: Called directly with FormData (formData)
     else if (prevStateOrFormData instanceof FormData) {
-        inputData = Object.fromEntries(prevStateOrFormData.entries());
+        inputData = Object.fromEntries(prevStateOrFormData);
     }
     // Case 3: Called directly with raw data object
     else {
@@ -45,11 +45,10 @@ export function createSafeAction<TInput, TOutput>(
     const result = schema.safeParse(inputData);
 
     if (!result.success) {
-      const flattenedErrors = result.error.flatten().fieldErrors;
       return {
         success: false,
-        fieldErrors: flattenedErrors,
-        message: 'Validation failed. Please check the inputs.',
+        fieldErrors: result.error.flatten().fieldErrors,
+        message: "Validation Error",
       };
     }
 

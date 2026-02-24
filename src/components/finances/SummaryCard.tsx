@@ -2,17 +2,19 @@ import { ArrowUpCircle, ArrowDownCircle, DollarSign } from 'lucide-react'
 
 interface SummaryCardProps {
   summary: {
-    totalIncome: number
-    totalExpenses: number
-    netProfit: number
+    totalRevenue: number
+    totalDirectExpenses: number
+    totalGeneralExpenses: number
+    netMargin: number
   } | null
 }
 
 export function SummaryCard({ summary }: SummaryCardProps) {
   if (!summary) return null
 
-  const { totalIncome, totalExpenses, netProfit } = summary
-  const isProfitPositive = netProfit >= 0
+  const { totalRevenue, totalDirectExpenses, totalGeneralExpenses, netMargin } = summary
+  const isProfitPositive = netMargin >= 0
+  const totalCost = totalDirectExpenses + totalGeneralExpenses
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -24,7 +26,7 @@ export function SummaryCard({ summary }: SummaryCardProps) {
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">Ingresos Totales</p>
-            <p className="text-2xl font-bold text-gray-900">${totalIncome.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-gray-900">${totalRevenue.toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -36,8 +38,8 @@ export function SummaryCard({ summary }: SummaryCardProps) {
             <ArrowDownCircle size={24} />
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Gastos Totales</p>
-            <p className="text-2xl font-bold text-gray-900">${totalExpenses.toLocaleString()}</p>
+            <p className="text-sm font-medium text-gray-500">Costos Operativos</p>
+            <p className="text-2xl font-bold text-gray-900">${totalCost.toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -53,7 +55,7 @@ export function SummaryCard({ summary }: SummaryCardProps) {
               Ganancia Neta
             </p>
             <p className={`text-2xl font-bold ${isProfitPositive ? 'text-green-900' : 'text-red-900'}`}>
-              ${netProfit.toLocaleString()}
+              ${netMargin.toLocaleString()}
             </p>
           </div>
         </div>

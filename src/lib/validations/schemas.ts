@@ -64,9 +64,10 @@ export const CreateVisitSchema = z.object({
 export type CreateVisitInput = z.infer<typeof CreateVisitSchema>;
 
 export const CompleteVisitSchema = z.object({
-  id: z.string().uuid(),
-  real_income: z.coerce.number().min(0),
-  worker_ids: z.array(z.string().uuid()).min(1, { message: "Selecciona al menos un trabajador" }),
+  id: z.string().trim().toLowerCase().uuid(),
+  total_price: z.coerce.number().min(0),
+  direct_expenses: z.coerce.number().min(0),
+  attendees: z.array(z.string().trim().toLowerCase()).min(1, "At least one worker is required"),
   notes: z.string().trim().nullable().optional().transform(val => val || null), // Preserve case
 });
 

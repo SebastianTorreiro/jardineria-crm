@@ -27,8 +27,8 @@ export function NewExpenseDrawer() {
 
     try {
       const result = await createExpense(formData)
-      if (result.error) {
-        alert(result.error)
+      if (!result.success) {
+        alert(result.message || 'Error registrando gasto')
       } else {
         // Nuclear Option: Force Refresh + Delay
         router.refresh()

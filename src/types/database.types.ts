@@ -254,6 +254,7 @@ export type Database = {
           visit_id: string
           worker_id: string
           amount: number
+          share_percentage: number
           type: 'share' | 'wage'
           created_at: string
         }
@@ -263,6 +264,7 @@ export type Database = {
           visit_id: string
           worker_id: string
           amount: number
+          share_percentage: number
           type: 'share' | 'wage'
           created_at?: string
         }
@@ -272,6 +274,7 @@ export type Database = {
           visit_id?: string
           worker_id?: string
           amount?: number
+          share_percentage?: number
           type?: 'share' | 'wage'
           created_at?: string
         }
@@ -492,6 +495,16 @@ export type Database = {
       }
     }
     Functions: {
+      complete_visit_with_payouts: {
+        Args: {
+          p_visit_id: string
+          p_org_id: string
+          p_income: number
+          p_expenses: number
+          p_payouts: Json
+        }
+        Returns: Json
+      }
       create_organization_for_user: {
         Args: {
           org_name: string

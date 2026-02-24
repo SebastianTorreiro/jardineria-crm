@@ -19,8 +19,8 @@ export function NewClientDrawer() {
       
       try {
         const result = await createClientAction(formData)
-        if (result.error) {
-          setError(result.error)
+        if (!result.success) {
+          setError(result.message || 'Error')
         } else {
           setOpen(false)
           // Reset form or show success toast

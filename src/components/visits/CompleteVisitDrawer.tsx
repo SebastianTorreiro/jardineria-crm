@@ -1,3 +1,5 @@
+"use client";
+
 import { Drawer } from 'vaul'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -20,7 +22,8 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
   const [error, setError] = useState<string | null>(null)
   const [workers, setWorkers] = useState<any[]>([])
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([])
-  const [realIncome, setRealIncome] = useState<string>('')
+  const [totalPrice, setTotalPrice] = useState<string>('')
+  const [directExpenses, setDirectExpenses] = useState<string>('')
   const [preview, setPreview] = useState<any[]>([])
   const router = useRouter()
 
@@ -39,12 +42,13 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
   // Update preview when inputs change
   useEffect(() => {
     if (selectedWorkers.length > 0) {
-        const incomeValue = parseFloat(realIncome) || 0
-        previewVisitProfit(visit.id, incomeValue, selectedWorkers).then(setPreview)
+        const incomeValue = parseFloat(totalPrice) || 0
+        const expensesValue = parseFloat(directExpenses) || 0
+        previewVisitProfit(visit.id, incomeValue, expensesValue, selectedWorkers).then(setPreview)
     } else {
         setPreview([])
     }
-  }, [realIncome, selectedWorkers, visit.id])
+  }, [totalPrice, directExpenses, selectedWorkers, visit.id])
 
   function toggleWorker(id: string) {
     setSelectedWorkers(prev => 
@@ -67,9 +71,10 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
     const formData = new FormData(event.currentTarget)
     const data = {
         id: visit.id,
-        real_income: parseFloat(realIncome) || 0,
+        total_price: parseFloat(totalPrice) || 0,
+        direct_expenses: parseFloat(directExpenses) || 0,
         notes: (formData.get('notes') as string) || '',
-        worker_ids: selectedWorkers
+        attendees: selectedWorkers
     }
 
     try {
@@ -136,49 +141,70 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="real_income" className="block text-sm font-bold text-emerald-900 uppercase tracking-wider ml-1">
-                    Ingreso Real
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-3xl font-bold text-emerald-600/50">$</span>
-                    <input
-                        type="number"
-                        name="real_income"
-                        id="real_income"
-                        required
-                        autoFocus
-                        step="0.01"
-                        value={realIncome}
-                        onChange={(e) => setRealIncome(e.target.value)}
-                        className="block w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-6 pl-12 text-4xl font-black text-emerald-950 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
-                        placeholder="0.00"
-                    />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="total_price" className="block text-sm font-bold text-emerald-900 uppercase tracking-wider ml-1">
+                      Precio Total
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-bold text-emerald-600/50">$</span>
+                      <input
+                          type="number"
+                          name="total_price"
+                          id="total_price"
+                          required
+                          autoFocus
+                          step="0.01"
+                          value={totalPrice}
+                          onChange={(e) => setTotalPrice(e.target.value)}
+                          className="block w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-4 pl-12 text-2xl font-black text-emerald-950 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
+                          placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="direct_expenses" className="block text-sm font-bold text-emerald-900 uppercase tracking-wider ml-1">
+                      Gastos Directos
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-bold text-emerald-600/50">$</span>
+                      <input
+                          type="number"
+                          name="direct_expenses"
+                          id="direct_expenses"
+                          required
+                          step="0.01"
+                          value={directExpenses}
+                          onChange={(e) => setDirectExpenses(e.target.value)}
+                          className="block w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-4 pl-12 text-2xl font-black text-emerald-950 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
+                          placeholder="0.00"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 {/* Breakdown Preview */}
-                {preview.length > 0 && (
-                    <div className="space-y-3 p-5 rounded-2xl bg-emerald-50/30 border border-emerald-100/50">
-                        <p className="text-xs font-bold text-emerald-700/70 uppercase tracking-widest ml-1 mb-2">Desglose de Ganancias</p>
-                        <div className="flex flex-wrap gap-2">
-                            {preview.map((p) => (
-                                <div 
-                                    key={p.worker_id}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-emerald-100 shadow-sm"
-                                >
-                                    <span className="text-sm font-bold text-emerald-900">{p.worker_name}</span>
-                                    <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">
-                                        {p.share_percentage > 0 ? `${p.share_percentage}%` : 'Sueldo'}
+                <div className="space-y-3 p-5 rounded-2xl bg-emerald-50/30 border border-emerald-100/50">
+                    <p className="text-xs font-bold text-emerald-700/70 uppercase tracking-widest ml-1 mb-2">Desglose de Ganancias</p>
+                    
+                    {preview.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2 px-3 py-3 rounded-xl bg-white border border-emerald-100 shadow-sm font-bold text-emerald-900 text-sm">
+                                {preview.map((p, i) => (
+                                    <span key={p.name}>
+                                        {i > 0 && <span className="mx-2 text-emerald-300">|</span>}
+                                        {p.name} ({p.percentage}%): <span className="font-black text-emerald-950">${p.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
                                     </span>
-                                    <span className="text-sm font-black text-emerald-950">
-                                        ${p.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <div className="flex items-center justify-center p-4 rounded-xl bg-white border border-emerald-100 shadow-sm text-sm font-bold text-emerald-600/50">
+                            Ingresa los montos y selecciona trabajadores para ver el desglose
+                        </div>
+                    )}
+                </div>
 
                 <div className="space-y-2">
                   <label htmlFor="notes" className="block text-sm font-bold text-emerald-900 uppercase tracking-wider ml-1">
@@ -201,7 +227,7 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || preview.length === 0}
                   className="mt-2 w-full rounded-2xl bg-emerald-600 px-6 py-5 text-center text-xl font-black text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50"
                 >
                   {loading ? 'Guardando...' : 'Finalizar y Cobrar'}

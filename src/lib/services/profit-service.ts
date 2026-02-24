@@ -1,20 +1,88 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 
-export type ProfitBreakdown = {
+export type DistributionWorker = {
+    id: string
+    name: string
+    points: number
+}
+
+export type ProfitDistribution = {
     worker_id: string
-    worker_name: string
+    name: string
     amount: number
-    share_percentage: number
+    percentage: number
+}
+
+/**
+ * Pure function to calculate profit distribution based on relative points
+ */
+export function calculateVisitDistribution(
+    total_price: number,
+    direct_expenses: number,
+    workers: DistributionWorker[]
+): ProfitDistribution[] {
+    const netMargin = total_price - direct_expenses
+
+    if (workers.length === 0 || netMargin <= 0) {
+        return []
+    }
+
+    if (workers.length === 1) {
+        return [{
+            worker_id: workers[0].id,
+            name: workers[0].name,
+            amount: Number(netMargin.toFixed(2)),
+            percentage: 100
+        }]
+    }
+
+    const totalPoints = workers.reduce((sum, w) => sum + w.points, 0)
+
+    if (totalPoints === 0) {
+        return []
+    }
+
+    let remainingMargin = netMargin
+    let remainingPercentage = 100
+
+    return workers.map((worker, index) => {
+        const isLast = index === workers.length - 1
+        
+        if (isLast) {
+            return {
+                worker_id: worker.id,
+                name: worker.name,
+                amount: Number(remainingMargin.toFixed(2)),
+                percentage: Number(remainingPercentage.toFixed(2))
+            }
+        }
+
+        const percentage = (worker.points / totalPoints) * 100
+        const amount = (worker.points / totalPoints) * netMargin
+        
+        const roundedAmount = Number(amount.toFixed(2))
+        const roundedPercentage = Number(percentage.toFixed(2))
+
+        remainingMargin -= roundedAmount
+        remainingPercentage -= roundedPercentage
+
+        return {
+            worker_id: worker.id,
+            name: worker.name,
+            amount: roundedAmount,
+            percentage: roundedPercentage
+        }
+    })
 }
 
 export async function calculateProfitSplit(
     supabase: SupabaseClient<Database>,
     visitId: string,
-    realIncome: number,
+    totalPrice: number,
+    directExpenses: number,
     selectedWorkerIds: string[]
-): Promise<ProfitBreakdown[]> {
-    // 1. Fetch workers information
+): Promise<ProfitDistribution[]> {
     const { data: workers, error: workersError } = await supabase
         .from('workers')
         .select('id, name, is_partner')
@@ -25,28 +93,28 @@ export async function calculateProfitSplit(
         return []
     }
 
-    // 2. Identify partners vs workers
-    const partners = workers.filter(w => w.is_partner)
-    // Note: If no partners attended, the logic might need adjustment, 
-    // but based on requirements, partners share the 60%.
-    
-    if (partners.length === 0) {
-        return []
-    }
+    // Map to DistributionWorker with business rules for points
+    const distributionWorkers: DistributionWorker[] = workers
+        .filter(w => w.is_partner) // Only partners share the net margin
+        .map(w => {
+            let points = 0
+            const nameLower = w.name.toLowerCase()
+            
+            // Business rule defaults
+            if (nameLower.includes('theo')) {
+                points = 60
+            } else if (nameLower.includes('sebastian') || nameLower.includes('sebastián')) {
+                points = 40
+            } else {
+                points = 50 // Default for other potential partners
+            }
 
-    // 3. Simple 60/40 logic (ignoring direct expenses for now as they are not passed in)
-    // Actually, expenses should be deducted. 
-    // If the user wants to deduct expenses, we should fetch them or have them passed.
-    // For now, let's assume realIncome is already "after direct expenses" or just use total.
-    // The user said: "60% for partners and 40% for the company (Caja de Empresa) after deducting expenses".
-    
-    const partnerTotalShare = realIncome * 0.6
-    const sharePerPartner = partnerTotalShare / partners.length
+            return {
+                id: w.id,
+                name: w.name,
+                points
+            }
+        })
 
-    return partners.map(p => ({
-        worker_id: p.id,
-        worker_name: p.name,
-        amount: sharePerPartner,
-        share_percentage: 60 / partners.length
-    }))
+    return calculateVisitDistribution(totalPrice, directExpenses, distributionWorkers)
 }

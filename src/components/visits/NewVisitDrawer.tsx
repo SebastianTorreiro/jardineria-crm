@@ -52,8 +52,8 @@ export function NewVisitDrawer({ defaultDate }: NewVisitDrawerProps) {
     try {
       // 1. Call Server Action
       const result = await createVisit(formData)
-      if (result.error) {
-        alert(result.error)
+      if (!result.success) {
+        alert(result.message || 'Error creating visit')
       } else {
         // 2. Force Hard Refresh
         router.refresh()
