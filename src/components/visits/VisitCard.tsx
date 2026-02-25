@@ -15,8 +15,8 @@ export function VisitCard({ visit }: VisitCardProps) {
   
   const isCompleted = visit.status === 'completed'
   const cardStyle = isCompleted 
-    ? "flex flex-col gap-2 rounded-xl bg-green-50 p-4 shadow-sm border border-green-300 opacity-80"
-    : "flex flex-col gap-2 rounded-xl bg-white p-4 shadow-sm border border-gray-100"
+    ? "flex flex-col gap-2 rounded-xl bg-emerald-50 p-4 shadow-sm border border-emerald-300 opacity-80"
+    : "flex flex-col gap-2 rounded-xl bg-white p-4 shadow-sm border border-slate-200"
 
   const [mainNote, closingNote] = visit.notes ? visit.notes.split('[Cierre]:') : [visit.notes, null]
 
@@ -24,7 +24,7 @@ export function VisitCard({ visit }: VisitCardProps) {
     <div className={cardStyle}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Clock size={16} className="text-green-600 font-bold" />
+          <Clock size={16} className="text-emerald-600 font-bold" />
           <span className="font-medium text-gray-900 capitalize">
             {visit.start_time ? `${visit.start_time} | ` : ''}
             {dateDisplay}
@@ -33,7 +33,7 @@ export function VisitCard({ visit }: VisitCardProps) {
 
         {visit.status === 'pending' ? (
             <CompleteVisitDrawer visit={visit}>
-                <button className="inline-flex items-center rounded-full bg-white px-3 py-1 text-sm font-medium text-green-700 shadow-sm ring-1 ring-inset ring-green-600 hover:bg-green-50">
+                <button className="inline-flex items-center rounded-full bg-white px-3 py-1 text-sm font-medium text-emerald-700 shadow-sm ring-1 ring-inset ring-emerald-600 hover:bg-emerald-50">
                     ✅ Completar
                 </button>
             </CompleteVisitDrawer>
@@ -41,7 +41,7 @@ export function VisitCard({ visit }: VisitCardProps) {
             <span
             className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${
                 isCompleted
-                ? 'bg-green-100 text-green-700 text-lg font-bold' // Larger for completed
+                ? 'bg-emerald-100 text-emerald-800 text-lg font-bold' // Larger for completed
                 : visit.status === 'canceled'
                 ? 'bg-red-100 text-red-800 text-xs'
                 : 'bg-yellow-100 text-yellow-800 text-xs'
@@ -66,7 +66,7 @@ export function VisitCard({ visit }: VisitCardProps) {
         )}
         
         {closingNote && (
-           <div className="mt-2 p-2 bg-green-100 text-green-800 text-xs rounded border border-green-200">
+           <div className="mt-2 p-2 bg-emerald-100 text-emerald-800 text-xs rounded border border-emerald-200">
              🏁 Cierre: {closingNote.trim()}
            </div>
         )}

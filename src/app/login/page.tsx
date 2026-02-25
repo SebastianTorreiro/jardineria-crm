@@ -53,7 +53,7 @@ export default function LoginPage() {
         if (error) throw error
         setMessage({ type: 'success', text: 'Password updated successfully! Redirecting...' })
         setTimeout(() => {
-            router.push('/dashboard')
+            router.push('/')
             router.refresh()
         }, 2000)
         return
@@ -78,7 +78,7 @@ export default function LoginPage() {
         })
 
         if (error) throw error
-        router.push('/dashboard')
+        router.push('/')
         router.refresh()
       }
     } catch (error: any) {

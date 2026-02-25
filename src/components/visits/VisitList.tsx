@@ -1,7 +1,8 @@
 import { VisitCard } from './VisitCard'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { parseLocalDate } from '@/utils/date-helpers'
+import { parseLocalDate, formatLocalDate } from '@/utils/date-helpers'
+import { CompleteVisitDrawer } from './CompleteVisitDrawer'
 
 interface VisitListProps {
   visits: any[]
@@ -36,10 +37,50 @@ export function VisitList({ visits, selectedDate }: VisitListProps) {
             <p className="text-sm">Nada pendiente por hoy. 🌿</p>
          </div>
       ) : (
-        <div className="mb-8 flex flex-col gap-4">
-          {pendingVisits.map((visit) => (
-            <VisitCard key={visit.id} visit={visit} />
-          ))}
+        <div className="mb-8">
+            {/* Desktop View */}
+            <div className="hidden sm:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Hora</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cliente</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Dirección</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200">
+                        {pendingVisits.map((visit) => (
+                            <tr key={visit.id} className="hover:bg-slate-50 transition-colors">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-medium capitalize">
+                                    {visit.start_time ? `${visit.start_time} | ` : ''}
+                                    {visit.scheduled_date ? formatLocalDate(visit.scheduled_date, 'EEEE d') : '--'}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-medium">
+                                    {visit.properties?.clients?.name || 'Sin asignar'}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                    {visit.properties?.address || 'Sin asignar'}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                    <CompleteVisitDrawer visit={visit}>
+                                        <button className="inline-flex items-center rounded-full bg-white px-3 py-1 text-sm font-medium text-emerald-700 shadow-sm ring-1 ring-inset ring-emerald-600 hover:bg-emerald-50 transition-colors">
+                                            ✅ Completar
+                                        </button>
+                                    </CompleteVisitDrawer>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            
+            {/* Mobile View */}
+            <div className="grid grid-cols-1 gap-4 sm:hidden">
+              {pendingVisits.map((visit) => (
+                <VisitCard key={visit.id} visit={visit} />
+              ))}
+            </div>
         </div>
       )}
 
@@ -50,7 +91,41 @@ export function VisitList({ visits, selectedDate }: VisitListProps) {
                 ✅ Completadas 
                 <span className="text-xs font-normal text-gray-400">({completedVisits.length})</span>
             </h3>
-            <div className="flex flex-col gap-4">
+            <div className="hidden sm:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm mt-4">
+                <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Hora</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cliente</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado / Cobro</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200">
+                        {completedVisits.map((visit) => {
+                            const isCompleted = visit.status === 'completed';
+                            return (
+                                <tr key={visit.id} className="hover:bg-slate-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-medium capitalize">
+                                        {visit.start_time ? `${visit.start_time} | ` : ''}
+                                        {visit.scheduled_date ? formatLocalDate(visit.scheduled_date, 'EEEE d') : '--'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-medium">
+                                        {visit.properties?.clients?.name || 'Sin asignar'}
+                                        <div className="text-xs text-slate-500 font-normal">{visit.properties?.address || 'Sin asignar'}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-left text-sm">
+                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                                            {isCompleted ? `Cobrado: $${visit.total_price ?? '0'}` : 'Cancelada'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:hidden mt-4">
                 {completedVisits.map((visit) => (
                     <VisitCard key={visit.id} visit={visit} />
                 ))}

@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useActionState, useEffect } from 'react'
+import { useState } from 'react'
 import { Plus, PenTool, Package } from 'lucide-react'
-import { createTool, createSupply, updateToolStatus, updateSupplyStock, Tool, Supply } from './actions'
-import { FormField } from '@/components/ui/FormField'
+import { updateToolStatus, updateSupplyStock, Tool, Supply } from './actions'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton'
+import { BaseDrawer } from '@/components/ui/BaseDrawer'
+import { ToolForm } from '@/components/inventory/ToolForm'
+import { SupplyForm } from '@/components/inventory/SupplyForm'
 
 function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -16,29 +19,9 @@ interface InventoryClientProps {
     initialSupplies: Supply[]
 }
 
-const initialState = {
-    success: false,
-    message: '',
-    fieldErrors: {}
-}
-
 export default function InventoryClient({ initialTools, initialSupplies }: InventoryClientProps) {
   const [activeTab, setActiveTab] = useState<'tools' | 'supplies'>('tools')
   const [isModalOpen, setIsModalOpen] = useState(false)
-
-  // Actions
-  const [toolState, createToolAction, isToolPending] = useActionState(createTool, initialState)
-  const [supplyState, createSupplyAction, isSupplyPending] = useActionState(createSupply, initialState)
-
-  // Close modal on success
-  useEffect(() => {
-    if (toolState.success || supplyState.success) {
-        setIsModalOpen(false)
-        // Reset/Cleanup logic if needed, usually just closing is enough as state is local to the hook run
-        // But useActionState preserves state.
-        // We might want to manually reset the form if it was a ref, but here we just navigate away/close.
-    }
-  }, [toolState.success, supplyState.success])
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">
@@ -47,13 +30,6 @@ export default function InventoryClient({ initialTools, initialSupplies }: Inven
            <h1 className="text-2xl font-bold text-gray-900">Inventario</h1>
            <p className="text-sm text-gray-500">Gestiona tus herramientas e insumos.</p>
         </div>
-        <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 transition-colors"
-        >
-            <Plus className="h-4 w-4" />
-            {activeTab === 'tools' ? 'Nueva Herramienta' : 'Nuevo Insumo'}
-        </button>
       </div>
 
       {/* Tabs */}
@@ -89,7 +65,64 @@ export default function InventoryClient({ initialTools, initialSupplies }: Inven
       {/* Content */}
       <div className="flex-1 overflow-auto">
         {activeTab === 'tools' ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="pb-24">
+                {/* Desktop View (Table) */}
+                <div className="hidden sm:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm mb-6">
+                    <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Herramienta</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Marca</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Estado / Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-200">
+                            {initialTools.map((tool) => (
+                                <tr key={tool.id} className="hover:bg-slate-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm font-semibold text-slate-900">{tool.name}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm text-slate-500">{tool.brand || 'Sin marca'}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center gap-3">
+                                            <span className={cn(
+                                                "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset",
+                                                tool.status === 'ok' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' :
+                                                tool.status === 'service' ? 'bg-yellow-50 text-yellow-800 ring-yellow-600/20' :
+                                                'bg-red-50 text-red-700 ring-red-600/20'
+                                            )}>
+                                                {tool.status === 'ok' ? 'Disponible' : tool.status === 'service' ? 'Mantenimiento' : 'Roto'}
+                                            </span>
+                                            <select 
+                                                className="block rounded-md border-0 py-1 pl-3 pr-8 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-emerald-600 sm:text-xs sm:leading-6 ml-auto"
+                                                value={tool.status}
+                                                onChange={async (e) => {
+                                                    await updateToolStatus({ id: tool.id, status: e.target.value as any })
+                                                }}
+                                            >
+                                                <option value="ok">Disponible</option>
+                                                <option value="service">Mantenimiento</option>
+                                                <option value="broken">Roto</option>
+                                            </select>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {initialTools.length === 0 && (
+                                <tr>
+                                    <td colSpan={3} className="px-6 py-12 text-center text-sm text-slate-500 bg-slate-50">
+                                        No hay herramientas registradas. ¡Agrega la primera!
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Mobile View (Cards) */}
+                <div className="grid grid-cols-1 gap-4 sm:hidden">
                 {initialTools.map((tool) => (
                     <div key={tool.id} className="relative flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
                         <div>
@@ -125,39 +158,42 @@ export default function InventoryClient({ initialTools, initialSupplies }: Inven
                     </div>
                 ))}
                 {initialTools.length === 0 && (
-                    <div className="col-span-full py-12 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                    <div className="col-span-full py-12 text-center text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300">
                         No hay herramientas registradas. ¡Agrega la primera!
                     </div>
                 )}
+                </div>
             </div>
         ) : (
-            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+            <div className="pb-24">
+                {/* Desktop View (Table) */}
+                <div className="hidden sm:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm mb-6">
+                    <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Insumo</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Stock Actual</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Mínimo</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Insumo</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Stock Actual</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Mínimo</th>
                             <th className="relative px-6 py-3"><span className="sr-only">Editar</span></th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
+                    <tbody className="divide-y divide-slate-200 bg-white">
                         {initialSupplies.map((supply) => (
-                            <tr key={supply.id} className={supply.current_stock < supply.min_stock ? 'bg-red-50' : ''}>
+                            <tr key={supply.id} className={cn("hover:bg-slate-50 transition-colors", supply.current_stock < supply.min_stock ? 'bg-red-50/50' : '')}>
                                 <td className="whitespace-nowrap px-6 py-4">
-                                    <div className="text-sm font-medium text-gray-900">{supply.name}</div>
+                                    <div className="text-sm font-semibold text-slate-900">{supply.name}</div>
                                 </td>
                                 <td className="whitespace-nowrap px-6 py-4">
                                     <span className={cn(
-                                        "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset",
+                                        "inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset",
                                         supply.current_stock < supply.min_stock 
-                                            ? 'bg-red-100 text-red-700 ring-red-600/10' 
-                                            : 'bg-green-100 text-green-700 ring-green-600/10'
+                                            ? 'bg-red-100 text-red-700 ring-red-600/20 shadow-sm' 
+                                            : 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
                                     )}>
                                         {supply.current_stock} {supply.unit}
                                     </span>
                                 </td>
-                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                                <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-500">
                                     {supply.min_stock} {supply.unit}
                                 </td>
                                 <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
@@ -168,11 +204,10 @@ export default function InventoryClient({ initialTools, initialSupplies }: Inven
                                                 const num = parseInt(val)
                                                 if (!isNaN(num)) {
                                                     await updateSupplyStock({ id: supply.id, quantity: num })
-                                                    // Router will refresh
                                                 }
                                             }
                                         }}
-                                        className="text-green-600 hover:text-green-900"
+                                        className="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
                                     >
                                         Actualizar
                                     </button>
@@ -181,7 +216,7 @@ export default function InventoryClient({ initialTools, initialSupplies }: Inven
                         ))}
                          {initialSupplies.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="px-6 py-12 text-center text-sm text-gray-500 bg-gray-50">
+                                <td colSpan={4} className="px-6 py-12 text-center text-sm text-slate-500 bg-slate-50">
                                     No hay insumos registrados.
                                 </td>
                             </tr>
@@ -189,134 +224,73 @@ export default function InventoryClient({ initialTools, initialSupplies }: Inven
                     </tbody>
                 </table>
             </div>
+
+            {/* Mobile View (Cards) */}
+            <div className="grid grid-cols-1 gap-4 sm:hidden">
+                {initialSupplies.map((supply) => (
+                    <div key={supply.id} className="flex flex-col gap-3 rounded-xl bg-white p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-bold text-slate-900 text-lg">{supply.name}</h3>
+                            <button 
+                                onClick={async () => {
+                                    const val = prompt(`Actualizar stock de ${supply.name}:`, supply.current_stock.toString())
+                                    if (val !== null) {
+                                        const num = parseInt(val)
+                                        if (!isNaN(num)) {
+                                            await updateSupplyStock({ id: supply.id, quantity: num })
+                                        }
+                                    }
+                                }}
+                                className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20 hover:bg-emerald-100 transition-colors"
+                            >
+                                ✏️ Stock
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                            <div className="flex flex-col">
+                                <span className="text-xs text-slate-500 mb-1">Stock Actual</span>
+                                <span className={cn(
+                                    "inline-flex items-center justify-center rounded-lg px-3 py-1 text-sm font-bold ring-1 ring-inset",
+                                    supply.current_stock < supply.min_stock 
+                                        ? 'bg-red-50 text-red-700 ring-red-600/20' 
+                                        : 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                                )}>
+                                    {supply.current_stock} {supply.unit}
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className="text-xs text-slate-500 mb-1">Mínimo</span>
+                                <span className="text-sm font-medium text-slate-700">
+                                    {supply.min_stock} {supply.unit}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
         )}
       </div>
 
-      {/* Modal Overlay */}
-      {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4 transition-all">
-              <div className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                  <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
-                      {activeTab === 'tools' ? 'Agregar Herramienta' : 'Agregar Insumo'}
-                  </h3>
-                  
-                  {activeTab === 'tools' ? (
-                    <form action={createToolAction} className="space-y-4">
-                        {/* Global Error */}
-                        {toolState?.message && !toolState?.success && (
-                             <div className="rounded-md bg-red-50 p-3 text-sm text-red-700 border border-red-200">
-                                {toolState.message}
-                             </div>
-                        )}
+      <FloatingActionButton onClick={() => setIsModalOpen(true)} />
 
-                        <FormField 
-                            name="name" 
-                            label="Nombre" 
-                            required 
-                            error={toolState?.fieldErrors?.name}
-                        />
-
-                         <FormField 
-                            name="brand" 
-                            label="Marca" 
-                            error={toolState?.fieldErrors?.brand}
-                        />
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Estado Inicial</label>
-                            <select 
-                                name="status" 
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm py-2 px-3 border"
-                            >
-                                <option value="ok">Disponible</option>
-                                <option value="service">En Mantenimiento</option>
-                                <option value="broken">Roto</option>
-                            </select>
-                        </div>
-
-                        <div className="mt-6 flex justify-end gap-3">
-                            <button 
-                                type="button" 
-                                onClick={() => setIsModalOpen(false)}
-                                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                            >
-                                Cancelar
-                            </button>
-                            <button 
-                                type="submit"
-                                disabled={isToolPending}
-                                className="inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isToolPending ? 'Guardando...' : 'Guardar'}
-                            </button>
-                        </div>
-                    </form>
-                  ) : (
-                    <form action={createSupplyAction} className="space-y-4">
-                         {/* Global Error */}
-                         {supplyState?.message && !supplyState?.success && (
-                             <div className="rounded-md bg-red-50 p-3 text-sm text-red-700 border border-red-200">
-                                {supplyState.message}
-                             </div>
-                        )}
-
-                        <FormField 
-                            name="name" 
-                            label="Nombre" 
-                            required 
-                            error={supplyState?.fieldErrors?.name}
-                        />
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField 
-                                name="current_stock" 
-                                label="Stock Actual" 
-                                type="number"
-                                required 
-                                error={supplyState?.fieldErrors?.current_stock}
-                            />
-                            <FormField 
-                                name="unit" 
-                                label="Unidad (ej. L, Kg)" 
-                                required 
-                                defaultValue="unidades"
-                                error={supplyState?.fieldErrors?.unit}
-                            />
-                        </div>
-
-                        <div>
-                             <FormField 
-                                name="min_stock" 
-                                label="Alerta Stock Mínimo" 
-                                type="number"
-                                required 
-                                error={supplyState?.fieldErrors?.min_stock}
-                            />
-                            <p className="mt-1 text-xs text-gray-500">Se mostrará una alerta si el stock baja de este número.</p>
-                        </div>
-
-                         <div className="mt-6 flex justify-end gap-3">
-                            <button 
-                                type="button" 
-                                onClick={() => setIsModalOpen(false)}
-                                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                            >
-                                Cancelar
-                            </button>
-                            <button 
-                                type="submit"
-                                disabled={isSupplyPending}
-                                className="inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isSupplyPending ? 'Guardando...' : 'Guardar'}
-                            </button>
-                        </div>
-
-                    </form>
-                  )}
-              </div>
-          </div>
-      )}
+      <BaseDrawer 
+        isOpen={isModalOpen} 
+        onClose={setIsModalOpen} 
+        title={activeTab === 'tools' ? 'Agregar Herramienta' : 'Agregar Insumo'}
+      >
+        {activeTab === 'tools' ? (
+          <ToolForm 
+            onSuccess={() => setIsModalOpen(false)} 
+            onCancel={() => setIsModalOpen(false)} 
+          />
+        ) : (
+          <SupplyForm 
+            onSuccess={() => setIsModalOpen(false)} 
+            onCancel={() => setIsModalOpen(false)} 
+          />
+        )}
+      </BaseDrawer>
     </div>
   )
 }
