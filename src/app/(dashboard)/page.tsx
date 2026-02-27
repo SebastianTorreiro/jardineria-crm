@@ -22,6 +22,9 @@ export default async function DashboardPage() {
       redirect('/onboarding')
   }
 
+  const { data: { user } } = await supabase.auth.getUser()
+  const userName = user?.user_metadata?.name?.split(' ')[0] || 'Usuario'
+
   // 1. Fetch Stats in Parallel
   const today = new Date().toISOString().split('T')[0]
   const firstDayOfMonth = startOfMonth(new Date()).toISOString()
@@ -58,6 +61,7 @@ export default async function DashboardPage() {
           id,
           scheduled_date,
           status,
+          notes,
           properties (
               address,
               clients ( name )
@@ -87,7 +91,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">Bienvenido a Jardinería CRM. Aquí tienes un resumen de hoy.</p>
+        <p className="mt-2 text-gray-600">Hola, {userName}. Aquí tienes un resumen de hoy.</p>
       </div>
 
       {/* Stats Grid */}
@@ -129,23 +133,42 @@ export default async function DashboardPage() {
               <div className="space-y-4">
                   {todayVisits.data && todayVisits.data.length > 0 ? (
                       todayVisits.data.map((visit: any) => (
-                          <div key={visit.id} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 p-3">
-                              <div>
-                                  <p className="font-medium text-gray-900">{visit.properties?.clients?.name}</p>
-                                  <p className="text-sm text-gray-500">{visit.properties?.address}</p>
+                          <div key={visit.id} className="flex flex-col gap-3 w-full rounded-xl border border-gray-100 bg-gray-50 p-4 shadow-sm">
+                              <div className="flex items-start justify-between">
+                                  <div>
+                                      <p className="font-semibold text-gray-900">{visit.properties?.clients?.name}</p>
+                                      <p className="text-sm text-gray-500">{visit.properties?.address}</p>
+                                  </div>
+                                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                      visit.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                      visit.status === 'pending' ? 'bg-blue-100 text-blue-800' : 'bg-gray-200 text-gray-800'
+                                  }`}>
+                                      {visit.status === 'pending' ? 'Pendiente' : visit.status === 'completed' ? 'Completada' : visit.status}
+                                  </span>
                               </div>
-                              <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                                  visit.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                                  visit.status === 'pending' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                  {visit.status === 'pending' ? 'Pendiente' : visit.status === 'completed' ? 'Completada' : visit.status}
-                              </span>
+                              
+                              <div className="rounded-lg bg-white p-3 border border-gray-200 shadow-sm mt-1">
+                                  {visit.notes ? (
+                                      <p className="text-lg font-medium text-gray-900 whitespace-pre-wrap">{visit.notes}</p>
+                                  ) : (
+                                      <p className="text-sm text-gray-400 italic">Sin observaciones previas</p>
+                                  )}
+                              </div>
+                              
+                              {visit.status === 'pending' && (
+                                  <Link 
+                                      href={`/visits?date=${today}`} 
+                                      className="mt-2 flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 active:bg-emerald-800"
+                                  >
+                                      Completar Visita
+                                  </Link>
+                              )}
                           </div>
                       ))
                   ) : (
-                      <div className="text-center py-6 text-gray-500">
-                          <p>No hay visitas agendadas para hoy.</p>
-                          <p className="text-sm">¡Día de descanso o mantenimiento!</p>
+                      <div className="text-center py-6 text-gray-500 border border-dashed border-gray-200 rounded-xl bg-gray-50">
+                          <p className="font-medium">No hay visitas agendadas para hoy.</p>
+                          <p className="text-sm mt-1">¡Día de descanso o mantenimiento!</p>
                       </div>
                   )}
               </div>
