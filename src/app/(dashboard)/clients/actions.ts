@@ -59,10 +59,7 @@ export const createClientAction = createSafeAction(
         organization_id: ctx.orgId,
         name: data.name,
         phone: data.phone,
-        email: data.email, // Added email if schema has it, or removal if not? Schema has email. 
-                        // The original action didn't insert email? 
-                        // Original: name, phone. 
-                        // Let's stick to original logic plus email if available in schema/form.
+        notes: data.notes, // Note: email removed based on schema alignment
         })
         .select()
         .single()
@@ -139,26 +136,61 @@ export async function getClientDetails(clientId: string) {
 }
 
 const UpdateClientSchema = ClientSchema.extend({
-    id: z.string().uuid()
+    id: z.string().uuid(),
+    property_id: z.string().uuid().optional(), // Needed to know which property to update
+    address: z.string().trim().min(1, { message: "Address is required" }),
+    frequency: z.coerce.number().int().positive().nullable().optional(),
 })
 
 export const updateClient = createSafeAction(UpdateClientSchema, async (data, ctx) => {
-    const { error } = await ctx.supabase
+    // 1. Update Client
+    const { error: clientError } = await ctx.supabase
         .from('clients')
         .update({
             name: data.name,
             phone: data.phone,
-            email: data.email,
             notes: data.notes
         })
         .eq('id', data.id)
         .eq('organization_id', ctx.orgId)
 
-    if (error) throw error
+    if (clientError) {
+        console.error('Error updating client:', clientError)
+        return { success: false, message: 'Failed to update client' }
+    }
+
+    // 2. Update Property (if property_id is provided, assuming we edit index 0)
+    if (data.property_id) {
+        const { error: propertyError } = await ctx.supabase
+            .from('properties')
+            .update({
+                address: data.address,
+                frequency_days: data.frequency
+            })
+            .eq('id', data.property_id)
+            .eq('organization_id', ctx.orgId)
+
+        if (propertyError) {
+             console.error('Error updating property:', propertyError)
+             return { success: false, message: 'Failed to update property' }
+        }
+    } else {
+        // If they didn't have a property, we should create one since address is required in the unified form
+        const { error: propertyError } = await ctx.supabase.from('properties').insert({
+            organization_id: ctx.orgId,
+            client_id: data.id,
+            address: data.address,
+            frequency_days: data.frequency,
+        })
+        if (propertyError) {
+             console.error('Error creating property during client update:', propertyError)
+             return { success: false, message: 'Failed to create property' }
+        }
+    }
 
     revalidatePath(`/clients/${data.id}`)
     revalidatePath('/clients')
-    return { success: true, message: 'Client updated' }
+    return { success: true, message: 'Cliente actualizado exitosamente' }
 })
 
 const CreatePropertySchema = PropertySchema.extend({

@@ -1,5 +1,6 @@
-## [IN PROGRESS] Phase 2: Visits CRUD Control & Routing
-- [x] 2.1: Create Server Actions for `updateVisit` and `deleteVisit`.
-- [x] 2.2: Build UI components (Edit/Cancel buttons) for pending visits.
-- [x] 2.3: Implement Tabs routing in `/visits` (Agenda vs. History/Completed).
-- [x] 2.4: Polish `VisitCard` UX (Expose Time and Notes for all states).
+## [COMPLETED] Phase 3: Client Profiles (The Source of Truth)
+- [x] 3.1: Enforce navigation.
+- [x] 3.2: Build Client Dashboard.
+- [x] 3.3: Client CRUD (Base Engine).
+- [x] 3.4: CRUD Unification (Schema & UI).
+- [x] 3.5: Passive Geolocation: Implement zero-friction Google Maps routing.

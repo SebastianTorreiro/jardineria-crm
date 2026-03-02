@@ -1,16 +1,18 @@
-# Current Task: VisitCard UX Polish (Phase 2.4)
+# Current Task: HOTFIX - Standardize Google Maps Universal Links (Phase 3.5)
 
-**Target File:** `src/components/visits/VisitCard.tsx`
+**Target Files:**
+- `src/components/clients/ClientCard.tsx`
+- `src/app/(dashboard)/clients/[id]/page.tsx`
+- `src/components/visits/VisitCard.tsx`
 
-**Objective:** Expose critical operational data (time of the appointment and contextual notes) directly on the visit card to eliminate the need for users to open the details view.
+**Objective:** Replace the currently implemented non-standard Google Maps URLs with the official, cross-platform Google Maps Search API URL scheme to ensure native app deep-linking on both iOS and Android.
 
 **Execution Requirements:**
-1. **Time Extraction:** Parse the `scheduled_date` string/timestamp to extract and display the specific time (e.g., "14:30" or "02:30 PM"). Render this prominently next to or below the calendar date icon.
-2. **Notes Visibility:** Map the `notes` field into the card layout. 
-   - It MUST be visually distinct (e.g., an italicized slate text or a slightly tinted background block inside the card).
-   - It MUST span the full width of the card's inner content so long instructions are readable.
-   - If `notes` is null or empty, do not render an empty block; render a subtle fallback like "Sin observaciones previas".
-3. **Component Reusability:** Ensure these additions look correct regardless of whether the card is rendering action buttons (Pending) or functioning as a read-only receipt (Completed).
+1. **Audit & Replace:** Scan the target files for any `<a>` tags containing `http://googleusercontent.com/maps.google.com/...`.
+2. **Apply Official Standard:** Replace the `href` attribute with the official search URL format: 
+   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+3. **Preserve UI/UX:** Do NOT alter any Tailwind classes, icons, Z-index configurations, or `target="_blank"` attributes. The buttons and links must look and behave visually exactly as they do now.
+4. **Resilience:** Ensure `encodeURIComponent` is properly used so spaces and special characters in addresses (like "Brandsen y Malabia") do not break the URL structure.
 
 **Constraints:**
-- Strictly maintain the Emerald/Slate Tailwind design system. Use native `Intl.DateTimeFormat` or `date-fns` (if already installed) for time parsing.
+- Do NOT modify any database schemas, server actions, or Next.js routing. This is purely a string replacement in the frontend components.

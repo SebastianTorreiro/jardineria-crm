@@ -78,10 +78,23 @@ export function VisitCard({ visit }: VisitCardProps) {
 
       <div>
         <h3 className="font-semibold text-gray-900">{visit.properties?.clients?.name || 'Sin asignar'}</h3>
-        <div className="mt-1 flex items-center gap-1 text-sm text-gray-500">
-          <MapPin size={14} />
-          <span>{visit.properties?.address || 'Sin asignar'}</span>
-        </div>
+        {visit.properties?.address ? (
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(visit.properties.address)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 flex w-fit items-center gap-1.5 text-sm text-slate-500 hover:text-emerald-700 transition-colors group/map"
+            title="Ver en Google Maps"
+          >
+            <MapPin size={14} className="group-hover/map:text-emerald-600 transition-colors shrink-0" />
+            <span className="underline decoration-slate-300 underline-offset-2 group-hover/map:decoration-emerald-500 line-clamp-1">{visit.properties.address}</span>
+          </a>
+        ) : (
+          <div className="mt-1 flex items-center gap-1 text-sm text-slate-500">
+            <MapPin size={14} className="shrink-0" />
+            <span>Sin asignar</span>
+          </div>
+        )}
         
         <div className="mt-3 w-full rounded-md bg-slate-50 p-3 text-sm italic border border-slate-100">
           {mainNote ? (

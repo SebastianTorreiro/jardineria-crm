@@ -40,7 +40,6 @@ export type SupplyInput = z.infer<typeof SupplySchema>;
 export const ClientSchema = z.object({
   name: z.string().trim().min(1, { message: "Name is required" }), // Preserve case
   phone: z.string().trim().nullable().optional().transform(val => val || null),
-  email: z.string().trim().toLowerCase().email().nullable().optional().transform(val => val === '' ? null : val), // Normalize email
   notes: z.string().trim().nullable().optional(), // Preserve case
 });
 
