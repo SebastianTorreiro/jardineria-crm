@@ -14,6 +14,17 @@ export function VisitCard({ visit }: VisitCardProps) {
   // Let's use that for a nice display.
   const dateDisplay = visit.scheduled_date ? formatLocalDate(visit.scheduled_date, 'EEEE d') : '--'
   
+  let timeStr = visit.start_time || null
+  if (!timeStr && visit.scheduled_date && visit.scheduled_date.includes('T')) {
+    const timeRegex = /T(\d{2}:\d{2})/;
+    const match = visit.scheduled_date.match(timeRegex);
+    if (match) {
+        // Fallback to regex if we want UTC time exactly as string.
+        // But the constraint says "Parse... date-fns or Intl.DateTimeFormat for time parsing".
+        timeStr = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' }).format(new Date(visit.scheduled_date));
+    }
+  }
+  
   const isCompleted = visit.status === 'completed'
   const cardStyle = isCompleted 
     ? "flex flex-col gap-2 rounded-xl bg-emerald-50 p-4 shadow-sm border border-emerald-300 opacity-80"
@@ -27,7 +38,7 @@ export function VisitCard({ visit }: VisitCardProps) {
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Clock size={16} className="text-emerald-600 font-bold" />
           <span className="font-medium text-gray-900 capitalize">
-            {visit.start_time ? `${visit.start_time} | ` : ''}
+            {timeStr ? `${timeStr} | ` : ''}
             {dateDisplay}
           </span>
         </div>
@@ -72,14 +83,16 @@ export function VisitCard({ visit }: VisitCardProps) {
           <span>{visit.properties?.address || 'Sin asignar'}</span>
         </div>
         
-        {mainNote && (
-          <p className="mt-2 text-sm text-gray-500 italic">
-            📝 "{mainNote.trim()}"
-          </p>
-        )}
+        <div className="mt-3 w-full rounded-md bg-slate-50 p-3 text-sm italic border border-slate-100">
+          {mainNote ? (
+            <p className="text-slate-600">📝 {mainNote.trim()}</p>
+          ) : (
+            <p className="text-slate-400">Sin observaciones previas</p>
+          )}
+        </div>
         
         {closingNote && (
-           <div className="mt-2 p-2 bg-emerald-100 text-emerald-800 text-xs rounded border border-emerald-200">
+           <div className="mt-2 w-full p-2 bg-emerald-100 text-emerald-800 text-xs rounded border border-emerald-200">
              🏁 Cierre: {closingNote.trim()}
            </div>
         )}
