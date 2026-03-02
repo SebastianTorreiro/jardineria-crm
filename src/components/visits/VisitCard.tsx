@@ -1,7 +1,8 @@
-import { MapPin, User, Clock } from 'lucide-react'
+import { MapPin, User, Clock, Edit2, Trash2 } from 'lucide-react'
 import { formatLocalDate } from '@/utils/date-helpers'
 import { CompleteVisitDrawer } from './CompleteVisitDrawer'
-
+import { EditVisitDrawer } from './EditVisitDrawer'
+import { DeleteVisitDrawer } from './DeleteVisitDrawer'
 interface VisitCardProps {
   visit: any
 }
@@ -32,11 +33,23 @@ export function VisitCard({ visit }: VisitCardProps) {
         </div>
 
         {visit.status === 'pending' ? (
-            <CompleteVisitDrawer visit={visit}>
-                <button className="inline-flex items-center rounded-full bg-white px-3 py-1 text-sm font-medium text-emerald-700 shadow-sm ring-1 ring-inset ring-emerald-600 hover:bg-emerald-50">
-                    ✅ Completar
-                </button>
-            </CompleteVisitDrawer>
+            <div className="flex items-center gap-2">
+                <EditVisitDrawer visit={visit}>
+                    <button className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 border border-slate-200 shadow-sm hover:bg-slate-50 hover:text-blue-600 transition-colors" title="Editar">
+                        <Edit2 size={15} />
+                    </button>
+                </EditVisitDrawer>
+                <DeleteVisitDrawer visit={visit}>
+                    <button className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 border border-slate-200 shadow-sm hover:bg-red-50 hover:text-red-600 transition-colors" title="Eliminar">
+                        <Trash2 size={15} />
+                    </button>
+                </DeleteVisitDrawer>
+                <CompleteVisitDrawer visit={visit}>
+                    <button className="inline-flex items-center rounded-full bg-white px-3 py-1 font-medium text-emerald-700 shadow-sm ring-1 ring-inset ring-emerald-600 hover:bg-emerald-50 text-sm h-8 ml-1">
+                        ✅ Completar
+                    </button>
+                </CompleteVisitDrawer>
+            </div>
         ) : (
             <span
             className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${

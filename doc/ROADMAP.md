@@ -1,16 +1,16 @@
-# Roadmap V1.1 (Estabilización y UX Operativa)
+# Roadmap V1.1 (Stabilization & Operational UX)
 
-## [EN CURSO] Fase 1: El Tablero Táctico (Dashboard Central)
-- [ ] 1.1: Personalizar saludo inicial con nombre de Supabase Auth.
-- [ ] 1.2: Refactorizar UI de Visitas Diarias: Ancho completo (`w-full`), priorizando visualmente el campo `notes` (observaciones operativas).
+## [COMPLETED] Phase 1: Tactical Dashboard
+- [x] 1.1: Personalize initial greeting using Supabase Auth name.
+- [x] 1.2: Refactor Daily Visits UI: Full width (`w-full`), prioritizing `notes` field visibility.
 
-## [PENDIENTE] Fase 2: Control CRUD de Visitas
-- [ ] 2.1: Server Actions para `updateVisit` y `deleteVisit`.
-- [ ] 2.2: UI para editar/cancelar citas pendientes.
-- [ ] 2.3: Separar `/visits` en Tabs (Agenda vs Historial/Completadas).
+## [IN PROGRESS] Phase 2: Visits CRUD Control
+- [ ] 2.1: Create Server Actions for `updateVisit` and `deleteVisit`.
+- [ ] 2.2: Build UI components (Edit/Cancel buttons) for pending visits.
+- [ ] 2.3: Implement Tabs routing in `/visits` (Agenda vs. History/Completed).
 
-## [EN DISCUSIÓN] Fase 3: Perfiles de Clientes
-- [ ] Crear ruta dinámica `/clients/[id]` para historial completo por cliente.
+## [PENDING] Phase 3: Client Profiles
+- [ ] Create dynamic route `/clients/[id]` for comprehensive client history.
 
-## [EN DISCUSIÓN] Fase 4: Infraestructura de Archivos
-- [ ] Evaluar Supabase Storage para fotos de podas finalizadas.
+## [PENDING] Phase 4: File Infrastructure
+- [ ] Evaluate Supabase Storage for completed pruning job photos.

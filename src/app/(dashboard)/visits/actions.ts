@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { getUserOrganization } from '@/utils/supabase/queries'
 import { revalidatePath } from 'next/cache'
 import { createSafeAction } from '@/lib/safe-action'
-import { CreateVisitSchema, CompleteVisitSchema } from '@/lib/validations/schemas'
+import { CreateVisitSchema, CompleteVisitSchema, UpdateVisitSchema, DeleteVisitSchema } from '@/lib/validations/schemas'
 import { calculateProfitSplit } from '@/lib/services/profit-service'
 
 // Actions
@@ -26,6 +26,38 @@ export const createVisit = createSafeAction(CreateVisitSchema, async (data, ctx)
     revalidatePath('/visits')
     revalidatePath('/')
     return { success: true, message: 'Visita creada correctamente' }
+})
+
+export const updateVisit = createSafeAction(UpdateVisitSchema, async (data, ctx) => {
+    const scheduledDate = new Date(`${data.date}T${data.time}:00`).toISOString()
+
+    const { error } = await ctx.supabase
+        .from('visits')
+        .update({
+            property_id: data.property_id,
+            notes: data.notes,
+            scheduled_date: scheduledDate
+        })
+        .match({ id: data.id, organization_id: ctx.orgId, status: 'pending' })
+
+    if (error) throw error
+
+    revalidatePath('/visits')
+    revalidatePath('/')
+    return { success: true, message: 'Visita actualizada correctamente' }
+})
+
+export const deleteVisit = createSafeAction(DeleteVisitSchema, async (data, ctx) => {
+    const { error } = await ctx.supabase
+        .from('visits')
+        .delete()
+        .match({ id: data.id, organization_id: ctx.orgId, status: 'pending' })
+
+    if (error) throw error
+
+    revalidatePath('/visits')
+    revalidatePath('/')
+    return { success: true, message: 'Visita eliminada correctamente' }
 })
 
 export const completeVisit = createSafeAction(CompleteVisitSchema, async (data, ctx) => {

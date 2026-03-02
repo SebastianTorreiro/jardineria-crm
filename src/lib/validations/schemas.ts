@@ -63,6 +63,22 @@ export const CreateVisitSchema = z.object({
 
 export type CreateVisitInput = z.infer<typeof CreateVisitSchema>;
 
+export const UpdateVisitSchema = z.object({
+  id: z.string().uuid(),
+  property_id: z.string().uuid(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Invalid date format YYYY-MM-DD" }),
+  time: z.string().regex(/^\d{2}:\d{2}$/, { message: "Invalid time format HH:mm" }),
+  notes: z.string().trim().nullable().optional().transform(val => val || null),
+});
+
+export type UpdateVisitInput = z.infer<typeof UpdateVisitSchema>;
+
+export const DeleteVisitSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type DeleteVisitInput = z.infer<typeof DeleteVisitSchema>;
+
 export const CompleteVisitSchema = z.object({
   id: z.string().trim().toLowerCase().uuid(),
   total_price: z.coerce.number().min(0),

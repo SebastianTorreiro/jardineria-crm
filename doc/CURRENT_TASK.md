@@ -1,15 +1,15 @@
-# Tarea Actual: Refactor del Dashboard (Fase 1)
+# Current Task: Visits Module Routing & History (Phase 2.3)
 
-**Archivo a modificar:** `src/app/(dashboard)/page.tsx`
+**Target File:** `src/app/(dashboard)/visits/page.tsx` (and related components).
 
-**Objetivo:** Adaptar el dashboard para que sirva como panel táctico en el teléfono, haciendo la información de la visita hiper-legible.
+**Objective:** Implement a Tabs architecture to separate future operations (Agenda) from past operations (History), solving the "black hole" of completed visits.
 
-**Requisitos de Ejecución:**
-1. Leer el `user_metadata.name` del usuario logueado en Supabase (o tabla workers) y cambiar el saludo genérico "Bienvenido a Jardinería CRM" a "Hola, [Nombre]".
-2. Rediseñar la sección de renderizado "Visitas de Hoy":
-   - Las tarjetas de visita deben usar el 100% del ancho del contenedor en móvil (`w-full`).
-   - El campo de la base de datos `notes` (observaciones de la poda) debe ser el elemento textual más grande/destacado de la tarjeta.
-   - Si `notes` está vacío o es null, mostrar en texto atenuado "Sin observaciones previas".
-   - Mantener el botón de completar visita altamente accesible.
+**Execution Requirements:**
+1. **Tabs UI:** Refactor the main `/visits` view to include a sticky or prominent Tabs selector at the top with two options: "Agenda" (Default) and "Historial" (History/Completed).
+2. **Data Filtering:** - The "Agenda" tab MUST render ONLY visits with `status = 'pending'`. Ensure the `VisitList` component displays the newly created Edit/Delete action buttons here.
+   - The "Historial" tab MUST render ONLY visits with `status = 'completed'`.
+3. **Historical Data Display:** In the "Historial" tab, the `VisitCard` (or equivalent) MUST NOT show Edit, Delete, or Complete buttons. It should act as a read-only receipt (showing the client, address, final date, and notes).
+4. **Resilience:** Ensure this routing change does not break the existing `loading.tsx` or `error.tsx` boundaries for the `/visits` module.
 
-**Restricciones:** - NO romper ni alterar los tres cuadros de resumen superior (Métricas).
+**Constraints:**
+- Strictly maintain the Emerald/Slate Tailwind design system.
