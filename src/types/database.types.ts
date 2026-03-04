@@ -128,10 +128,13 @@ export type Database = {
           organization_id: string
           property_id: string
           scheduled_date: string
+          start_time: string | null
           status: 'pending' | 'completed' | 'canceled'
           estimated_income: number | null
+          estimated_duration_mins: number | null
           real_income: number | null
           notes: string | null
+          notes_after_visit: string | null
           tools_used_summary: string | null
           created_at: string
           updated_at: string
@@ -141,10 +144,13 @@ export type Database = {
           organization_id: string
           property_id: string
           scheduled_date: string
+          start_time?: string | null
           status?: 'pending' | 'completed' | 'canceled'
           estimated_income?: number | null
+          estimated_duration_mins?: number | null
           real_income?: number | null
           notes?: string | null
+          notes_after_visit?: string | null
           tools_used_summary?: string | null
           created_at?: string
           updated_at?: string
@@ -154,10 +160,13 @@ export type Database = {
           organization_id?: string
           property_id?: string
           scheduled_date?: string
+          start_time?: string | null
           status?: 'pending' | 'completed' | 'canceled'
           estimated_income?: number | null
+          estimated_duration_mins?: number | null
           real_income?: number | null
           notes?: string | null
+          notes_after_visit?: string | null
           tools_used_summary?: string | null
           created_at?: string
           updated_at?: string

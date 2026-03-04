@@ -32,11 +32,19 @@ export function VisitForm({ defaultDate, onSuccess }: VisitFormProps) {
     // Intercept action to override timezone offsets safely
     const formAction = async (prevState: any, formData: FormData) => {
         const dateInput = formData.get('date_day') as string
+        const timeInput = formData.get('time') as string
+
         if (dateInput) {
              // Send as local string 'YYYY-MM-DD' dynamically parsing the day at Noon to ensure safe parsing
             const fullDateStr = format(new Date(`${dateInput}T12:00:00`), 'yyyy-MM-dd')
             formData.set('date', fullDateStr)
         }
+        
+        // Pass original time down as start_time to prevent it from dropping
+        if (timeInput) {
+            formData.set('start_time', timeInput)
+        }
+        
         return createVisit(prevState, formData)
     }
 
@@ -52,8 +60,10 @@ export function VisitForm({ defaultDate, onSuccess }: VisitFormProps) {
             router.refresh()
             onSuccess()
             setSelectedClientId('')
+        } else if (!state.success && state.message) {
+            toast.error(state.message)
         }
-    }, [state.success, onSuccess, router])
+    }, [state.success, state.message, onSuccess, router])
 
     return (
         <form action={action} className="flex flex-col gap-5">
@@ -116,9 +126,43 @@ export function VisitForm({ defaultDate, onSuccess }: VisitFormProps) {
                     label="Hora"
                     name="time"
                     type="time"
+                    lang="en-GB"
                     defaultValue="09:00"
                     error={state.fieldErrors?.time}
                 />
+            </div>
+
+            {/* 3.1 Estimations */}
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    label="Precio Estimado ($)"
+                    name="estimated_income"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    icon={<span className="font-bold text-emerald-600/50">$</span>}
+                    error={state.fieldErrors?.estimated_income}
+                />
+                
+                <div className="w-full">
+                    <label htmlFor="estimated_duration_mins" className="block text-sm font-medium text-emerald-900 mb-1.5 ml-0.5">Duración (min)</label>
+                    <select
+                        name="estimated_duration_mins"
+                        id="estimated_duration_mins"
+                        defaultValue="60"
+                        className={`block w-full rounded-lg border-slate-200 bg-white shadow-sm ring-emerald-500/20 transition-all duration-200 sm:text-sm px-3 py-2 border outline-none hover:border-slate-300 focus:border-emerald-500 focus:ring-2 h-[42px] ${state.fieldErrors?.estimated_duration_mins ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''}`}
+                    >
+                        <option value="15">15 min (Visita Corta)</option>
+                        <option value="30">30 min (Media Hora)</option>
+                        <option value="45">45 min</option>
+                        <option value="60">1 hora (Estándar)</option>
+                        <option value="90">1.5 horas</option>
+                        <option value="120">2 horas</option>
+                        <option value="180">3 horas</option>
+                        <option value="240">4 horas (Medio Día)</option>
+                    </select>
+                </div>
             </div>
 
             {/* 4. Notes */}

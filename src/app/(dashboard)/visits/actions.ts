@@ -13,10 +13,47 @@ export const createVisit = createSafeAction(CreateVisitSchema, async (data, ctx)
     // Combine date/time
     const scheduledDate = new Date(`${data.date}T${data.time}:00`).toISOString()
 
+    // 1. Backend Collision Detection (Interval Engine)
+    const startOfDay = new Date(`${data.date}T00:00:00`).toISOString()
+    const endOfDay = new Date(`${data.date}T23:59:59.999`).toISOString()
+
+    const { data: dayVisits, error: fetchError } = await ctx.supabase
+        .from('visits')
+        .select('id, scheduled_date, start_time, estimated_duration_mins')
+        .eq('organization_id', ctx.orgId)
+        .gte('scheduled_date', startOfDay)
+        .lte('scheduled_date', endOfDay)
+
+    if (fetchError) throw fetchError
+
+    const [newHours, newMinutes] = data.time.split(':').map(Number)
+    const newStartMins = newHours * 60 + newMinutes
+    const newEndMins = newStartMins + data.estimated_duration_mins
+
+    if (dayVisits) {
+        for (const visit of dayVisits) {
+            const timeString = visit.start_time || '00:00'
+            const [existingHours, existingMinutes] = timeString.split(':').map(Number)
+            const existingStartMins = existingHours * 60 + existingMinutes
+            const existingDuration = visit.estimated_duration_mins || 60
+            const existingEndMins = existingStartMins + existingDuration
+
+            if (newStartMins < existingEndMins && newEndMins > existingStartMins) {
+                return { 
+                    success: false, 
+                    message: "Superposición detectada: Ya hay una visita en ese rango horario." 
+                }
+            }
+        }
+    }
+
     const { error } = await ctx.supabase.from('visits').insert({
         property_id: data.property_id,
         notes: data.notes,
         scheduled_date: scheduledDate,
+        start_time: data.start_time,
+        estimated_income: data.estimated_income ?? null,
+        estimated_duration_mins: data.estimated_duration_mins,
         status: 'pending',
         organization_id: ctx.orgId
     })
@@ -77,6 +114,18 @@ export const completeVisit = createSafeAction(CompleteVisitSchema, async (data, 
         share_percentage: item.percentage,
         type: 'share'
     }))
+
+    if (data.notes_after_visit) {
+        const { error: updateError } = await ctx.supabase
+            .from('visits')
+            .update({ notes_after_visit: data.notes_after_visit })
+            .eq('id', data.id)
+            .eq('organization_id', ctx.orgId);
+            
+        if (updateError) {
+            console.error('Error saving visit notes:', updateError);
+        }
+    }
 
     const { error: rpcError } = await ctx.supabase.rpc('complete_visit_with_payouts', {
         p_visit_id: data.id,

@@ -12,6 +12,7 @@ import {
   AlertTriangle 
 } from 'lucide-react'
 import Link from 'next/link'
+import { VisitCard } from '@/components/visits/VisitCard'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -42,7 +43,8 @@ export default async function DashboardPage() {
       .from('visits')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
-      .eq('scheduled_date', today)
+      .gte('scheduled_date', `${today}T00:00:00.000Z`)
+      .lte('scheduled_date', `${today}T23:59:59.999Z`)
       .neq('status', 'canceled'),
 
     // Monthly Income
@@ -60,17 +62,21 @@ export default async function DashboardPage() {
       .select(`
           id,
           scheduled_date,
+          start_time,
+          estimated_duration_mins,
           status,
           notes,
+          total_price,
           properties (
               address,
               clients ( name )
           )
       `)
       .eq('organization_id', organizationId)
-      .eq('scheduled_date', today)
+      .gte('scheduled_date', `${today}T00:00:00.000Z`)
+      .lte('scheduled_date', `${today}T23:59:59.999Z`)
       .neq('status', 'canceled')
-      .order('id', { ascending: true }), 
+      .order('start_time', { ascending: true }), 
 
     // Low Stock Alert (Fetch all and filter in JS)
     supabase
@@ -133,37 +139,7 @@ export default async function DashboardPage() {
               <div className="space-y-4">
                   {todayVisits.data && todayVisits.data.length > 0 ? (
                       todayVisits.data.map((visit: any) => (
-                          <div key={visit.id} className="flex flex-col gap-3 w-full rounded-xl border border-gray-100 bg-gray-50 p-4 shadow-sm">
-                              <div className="flex items-start justify-between">
-                                  <div>
-                                      <p className="font-semibold text-gray-900">{visit.properties?.clients?.name}</p>
-                                      <p className="text-sm text-gray-500">{visit.properties?.address}</p>
-                                  </div>
-                                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                      visit.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                                      visit.status === 'pending' ? 'bg-blue-100 text-blue-800' : 'bg-gray-200 text-gray-800'
-                                  }`}>
-                                      {visit.status === 'pending' ? 'Pendiente' : visit.status === 'completed' ? 'Completada' : visit.status}
-                                  </span>
-                              </div>
-                              
-                              <div className="rounded-lg bg-white p-3 border border-gray-200 shadow-sm mt-1">
-                                  {visit.notes ? (
-                                      <p className="text-lg font-medium text-gray-900 whitespace-pre-wrap">{visit.notes}</p>
-                                  ) : (
-                                      <p className="text-sm text-gray-400 italic">Sin observaciones previas</p>
-                                  )}
-                              </div>
-                              
-                              {visit.status === 'pending' && (
-                                  <Link 
-                                      href={`/visits?date=${today}`} 
-                                      className="mt-2 flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 active:bg-emerald-800"
-                                  >
-                                      Completar Visita
-                                  </Link>
-                              )}
-                          </div>
+                          <VisitCard key={visit.id} visit={visit} />
                       ))
                   ) : (
                       <div className="text-center py-6 text-gray-500 border border-dashed border-gray-200 rounded-xl bg-gray-50">

@@ -57,6 +57,9 @@ export const CreateVisitSchema = z.object({
   property_id: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Invalid date format YYYY-MM-DD" }),
   time: z.string().regex(/^\d{2}:\d{2}$/, { message: "Invalid time format HH:mm" }),
+  start_time: z.string().regex(/^\d{2}:\d{2}$/, { message: "Invalid time format HH:mm" }),
+  estimated_income: z.coerce.number().min(0).nullable().optional(),
+  estimated_duration_mins: z.coerce.number().int().min(15).default(60),
   notes: z.string().trim().nullable().optional().transform(val => val || null), // Preserve case
 });
 
@@ -83,7 +86,7 @@ export const CompleteVisitSchema = z.object({
   total_price: z.coerce.number().min(0),
   direct_expenses: z.coerce.number().min(0),
   attendees: z.array(z.string().trim().toLowerCase()).min(1, "At least one worker is required"),
-  notes: z.string().trim().nullable().optional().transform(val => val || null), // Preserve case
+  notes_after_visit: z.string().trim().nullable().optional().transform(val => val || null), // Preserve case
 });
 
 export type CompleteVisitInput = z.infer<typeof CompleteVisitSchema>;

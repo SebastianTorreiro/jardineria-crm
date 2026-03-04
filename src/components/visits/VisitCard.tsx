@@ -1,4 +1,4 @@
-import { MapPin, User, Clock, Edit2, Trash2 } from 'lucide-react'
+import { MapPin, User, Clock, Edit2, Trash2, CalendarDays } from 'lucide-react'
 import { formatLocalDate } from '@/utils/date-helpers'
 import { CompleteVisitDrawer } from './CompleteVisitDrawer'
 import { EditVisitDrawer } from './EditVisitDrawer'
@@ -14,34 +14,35 @@ export function VisitCard({ visit }: VisitCardProps) {
   // Let's use that for a nice display.
   const dateDisplay = visit.scheduled_date ? formatLocalDate(visit.scheduled_date, 'EEEE d') : '--'
   
-  let timeStr = visit.start_time || null
-  if (!timeStr && visit.scheduled_date && visit.scheduled_date.includes('T')) {
-    const timeRegex = /T(\d{2}:\d{2})/;
-    const match = visit.scheduled_date.match(timeRegex);
-    if (match) {
-        // Fallback to regex if we want UTC time exactly as string.
-        // But the constraint says "Parse... date-fns or Intl.DateTimeFormat for time parsing".
-        timeStr = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' }).format(new Date(visit.scheduled_date));
-    }
-  }
+  const timeStr = visit.start_time || 'Sin horario'
+  const durationMins = visit.estimated_duration_mins || 60
   
   const isCompleted = visit.status === 'completed'
   const cardStyle = isCompleted 
-    ? "flex flex-col gap-2 rounded-xl bg-emerald-50 p-4 shadow-sm border border-emerald-300 opacity-80"
-    : "flex flex-col gap-2 rounded-xl bg-white p-4 shadow-sm border border-slate-200"
+    ? "flex items-start gap-3 rounded-xl bg-emerald-50 p-4 shadow-sm border border-emerald-300 opacity-80"
+    : "flex items-start gap-3 rounded-xl bg-white p-4 shadow-sm border border-slate-200"
 
   const [mainNote, closingNote] = visit.notes ? visit.notes.split('[Cierre]:') : [visit.notes, null]
 
   return (
     <div className={cardStyle}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Clock size={16} className="text-emerald-600 font-bold" />
-          <span className="font-medium text-gray-900 capitalize">
-            {timeStr ? `${timeStr} | ` : ''}
-            {dateDisplay}
-          </span>
-        </div>
+      {/* Time Column (Badge) */}
+      <div className="flex flex-col items-center justify-center w-[72px] rounded-lg bg-emerald-100 py-3 border border-emerald-200 text-emerald-800 shrink-0">
+          <span className="text-[17px] font-black tracking-tight">{timeStr}</span>
+          {timeStr !== 'Sin horario' && (
+             <span className="text-[10px] font-bold tracking-wider uppercase opacity-80 mt-0.5">{durationMins} min</span>
+          )}
+      </div>
+
+      {/* Main Content Column */}
+      <div className="flex-1 flex flex-col gap-2 min-w-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-sm text-gray-500">
+            <CalendarDays size={14} className="text-slate-400" />
+            <span className="font-medium text-slate-600 capitalize">
+              {dateDisplay}
+            </span>
+          </div>
 
         {visit.status === 'pending' ? (
             <div className="flex items-center gap-2">
@@ -109,6 +110,7 @@ export function VisitCard({ visit }: VisitCardProps) {
              🏁 Cierre: {closingNote.trim()}
            </div>
         )}
+      </div>
       </div>
     </div>
   )

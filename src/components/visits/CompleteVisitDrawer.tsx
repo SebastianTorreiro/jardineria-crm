@@ -24,8 +24,17 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([])
   const [totalPrice, setTotalPrice] = useState<string>('')
   const [directExpenses, setDirectExpenses] = useState<string>('')
+  const [noteTag, setNoteTag] = useState<string>('')
+  const [noteDetail, setNoteDetail] = useState<string>('')
   const [preview, setPreview] = useState<any[]>([])
   const router = useRouter()
+
+  const TAG_HELPERS: Record<string, string> = {
+    OPERATIVA: "Logística, accesos o herramientas necesarias.",
+    SANIDAD: "Plagas, hongos, o estado biológico de las plantas.",
+    COMERCIAL: "Oportunidades de nuevos trabajos o ventas.",
+    PREFERENCIA: "Reglas o gustos específicos del cliente."
+  }
 
   // Fetch workers when opening
   async function handleOpenChange(newOpen: boolean) {
@@ -68,12 +77,27 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
     setLoading(true)
     setError(null)
     
-    const formData = new FormData(event.currentTarget)
+    // Validate notes
+    let finalNotes = ''
+    if (noteTag || noteDetail.trim()) {
+        if (!noteTag) {
+            setError('Debe seleccionar una categoría para la nota.')
+            setLoading(false)
+            return
+        }
+        if (!noteDetail.trim()) {
+            setError('Debe ingresar un detalle para la categoría seleccionada.')
+            setLoading(false)
+            return
+        }
+        finalNotes = `[TAG: ${noteTag}] \n **Detalle:** ${noteDetail.trim()}`
+    }
+
     const data = {
         id: visit.id,
         total_price: parseFloat(totalPrice) || 0,
         direct_expenses: parseFloat(directExpenses) || 0,
-        notes: (formData.get('notes') as string) || '',
+        notes_after_visit: finalNotes,
         attendees: selectedWorkers
     }
 
@@ -206,17 +230,45 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
                     )}
                 </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="notes" className="block text-sm font-bold text-emerald-900 uppercase tracking-wider ml-1">
-                    Notas de la visita
-                  </label>
-                  <textarea
-                    name="notes"
-                    id="notes"
-                    rows={3}
-                    className="block w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-emerald-950 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"
-                    placeholder="Detalles importantes..."
-                  />
+                <div className="space-y-4 rounded-2xl bg-white p-5 border border-slate-200 shadow-sm">
+                  <div>
+                      <label htmlFor="noteTag" className="block text-sm font-bold text-emerald-900 uppercase tracking-wider ml-1 mb-2">
+                        Categoría de Nota (Opcional)
+                      </label>
+                      <select
+                        id="noteTag"
+                        value={noteTag}
+                        onChange={(e) => setNoteTag(e.target.value)}
+                        className="block w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-emerald-950 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none font-medium"
+                      >
+                        <option value="">Seleccione una categoría...</option>
+                        <option value="OPERATIVA">[OPERATIVA]</option>
+                        <option value="SANIDAD">[SANIDAD]</option>
+                        <option value="COMERCIAL">[COMERCIAL]</option>
+                        <option value="PREFERENCIA">[PREFERENCIA]</option>
+                      </select>
+                      {noteTag && (
+                          <p className="mt-2 text-sm text-emerald-600 font-medium italic ml-1 animate-in fade-in">
+                              💡 {TAG_HELPERS[noteTag]}
+                          </p>
+                      )}
+                  </div>
+
+                  {noteTag && (
+                      <div className="animate-in fade-in slide-in-from-top-2 pt-2">
+                        <label htmlFor="noteDetail" className="block text-sm font-bold text-emerald-900 uppercase tracking-wider ml-1 mb-2">
+                            Detalle de la nota
+                        </label>
+                        <textarea
+                            id="noteDetail"
+                            value={noteDetail}
+                            onChange={(e) => setNoteDetail(e.target.value)}
+                            rows={3}
+                            className="block w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-emerald-950 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"
+                            placeholder="Describa el detalle aquí..."
+                        />
+                      </div>
+                  )}
                 </div>
 
                 {error && (
