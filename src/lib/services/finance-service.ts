@@ -102,3 +102,48 @@ export async function getMonthlyFinancialSummary(
         payouts: Array.from(payoutsMap.values()).sort((a, b) => b.total_amount - a.total_amount)
     }
 }
+
+export async function createExpense(
+    supabase: SupabaseClient<Database>,
+    organizationId: string,
+    data: {
+        description?: string | null
+        amount: number
+        date: string
+        category: 'fuel' | 'equipment' | 'maintenance' | 'other'
+    }
+) {
+    const { error } = await supabase
+        .from('expenses')
+        .insert({
+            organization_id: organizationId,
+            description: data.description || null,
+            amount: data.amount,
+            date: data.date,
+            category: data.category,
+        })
+
+    if (error) throw error
+    return { success: true, message: 'Gasto registrado correctamente' }
+}
+
+export async function getExpenses(
+    supabase: SupabaseClient<Database>,
+    organizationId: string,
+    month: number,
+    year: number
+) {
+    const startDate = new Date(year, month, 1).toISOString()
+    const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
+
+    const { data } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
+
+    return data || []
+}

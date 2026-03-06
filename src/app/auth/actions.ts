@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 
 import { createClient } from '@/utils/supabase/server'
 
+import { loginWithPassword, signupWithPassword, signOut } from '@/lib/services/auth-service'
+
 export async function login(formData: FormData) {
   const supabase = await createClient()
 
@@ -12,10 +14,7 @@ export async function login(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
+  const { error } = await loginWithPassword(supabase, email, password)
 
   if (error) {
     return { error: 'Could not authenticate user' }
@@ -31,10 +30,7 @@ export async function signup(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-  })
+  const { error } = await signupWithPassword(supabase, email, password)
 
   if (error) {
      return { error: 'Could not create user' }
@@ -47,7 +43,7 @@ export async function signup(formData: FormData) {
 export async function logout() {
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signOut()
+  const { error } = await signOut(supabase)
 
   if (error) {
     redirect('/error')

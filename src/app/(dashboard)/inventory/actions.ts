@@ -7,6 +7,14 @@ import { createSafeAction } from '@/lib/safe-action'
 import { ToolSchema, SupplySchema, ToolInput, SupplyInput } from '@/lib/validations/schemas'
 import { Database } from '@/types/database.types'
 import { z } from 'zod'
+import {
+  getTools as getToolsService,
+  createTool as createToolService,
+  updateToolStatus as updateToolStatusService,
+  getSupplies as getSuppliesService,
+  createSupply as createSupplyService,
+  updateSupplyStock as updateSupplyStockService
+} from '@/lib/services/inventory-service'
 
 // --- INTERFACES (Mapped from Schema) ---
 export type Tool = ToolInput & { id: string, org_id: string }
@@ -20,22 +28,7 @@ export async function getTools(query?: string): Promise<Tool[]> {
   
   if (!organizationId) return []
 
-  let dbQuery = supabase
-    .from('tools')
-    .select('*')
-    .eq('organization_id', organizationId)
-    .order('name', { ascending: true })
-
-  if (query) {
-    dbQuery = dbQuery.ilike('name', `%${query}%`)
-  }
-
-  const { data, error } = await dbQuery
-
-  if (error) {
-    console.error('Error fetching tools:', error)
-    return []
-  }
+  const data = await getToolsService(supabase, organizationId, query)
 
   // Map database fields to interface
   return (data || []).map((item) => ({
@@ -72,14 +65,11 @@ function mapToolStatusToDbStatus(status: string): 'available' | 'maintenance' | 
 export const createTool = createSafeAction(ToolSchema, async (data, ctx) => {
     const dbStatus = mapToolStatusToDbStatus(data.status)
     
-    const { error } = await ctx.supabase.from('tools').insert({
-        organization_id: ctx.orgId,
+    await createToolService(ctx.supabase, ctx.orgId, {
         name: data.name,
         brand: data.brand,
         status: dbStatus
     })
-
-    if (error) throw error
 
     revalidatePath('/inventory')
     return { success: true, message: 'Tool created successfully' }
@@ -93,13 +83,7 @@ const UpdateToolStatusSchema = z.object({
 export const updateToolStatus = createSafeAction(UpdateToolStatusSchema, async (data, ctx) => {
     const dbStatus = mapToolStatusToDbStatus(data.status)
 
-    const { error } = await ctx.supabase
-        .from('tools')
-        .update({ status: dbStatus })
-        .eq('id', data.id)
-        .eq('organization_id', ctx.orgId) // Security check
-
-    if (error) throw error
+    await updateToolStatusService(ctx.supabase, ctx.orgId, data.id, dbStatus)
 
     revalidatePath('/inventory')
     return { success: true, message: 'Status updated' }
@@ -114,22 +98,7 @@ export async function getSupplies(query?: string): Promise<Supply[]> {
     
     if (!organizationId) return []
   
-    let dbQuery = supabase
-      .from('supplies')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('name', { ascending: true })
-  
-    if (query) {
-      dbQuery = dbQuery.ilike('name', `%${query}%`)
-    }
-  
-    const { data, error } = await dbQuery
-  
-    if (error) {
-      console.error('Error fetching supplies:', error)
-      return []
-    }
+    const data = await getSuppliesService(supabase, organizationId, query)
   
     return (data || []).map((item) => ({
         id: item.id,
@@ -142,15 +111,7 @@ export async function getSupplies(query?: string): Promise<Supply[]> {
 }
 
 export const createSupply = createSafeAction(SupplySchema, async (data, ctx) => {
-    const { error } = await ctx.supabase.from('supplies').insert({
-        organization_id: ctx.orgId,
-        name: data.name,
-        current_stock: data.current_stock,
-        min_stock: data.min_stock,
-        unit: data.unit
-    })
-
-    if (error) throw error
+    await createSupplyService(ctx.supabase, ctx.orgId, data)
 
     revalidatePath('/inventory')
     return { success: true, message: 'Supply created successfully' }
@@ -162,13 +123,7 @@ const UpdateSupplyStockSchema = z.object({
 })
 
 export const updateSupplyStock = createSafeAction(UpdateSupplyStockSchema, async (data, ctx) => {
-    const { error } = await ctx.supabase
-        .from('supplies')
-        .update({ current_stock: data.quantity })
-        .eq('id', data.id)
-        .eq('organization_id', ctx.orgId)
-
-    if (error) throw error
+    await updateSupplyStockService(ctx.supabase, ctx.orgId, data.id, data.quantity)
 
     revalidatePath('/inventory')
     return { success: true, message: 'Stock updated' }

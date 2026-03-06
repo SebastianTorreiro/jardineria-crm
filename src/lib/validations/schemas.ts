@@ -89,13 +89,4 @@ export const CompleteVisitSchema = z.object({
   notes_after_visit: z.string().trim().nullable().optional().transform(val => val || null), // Preserve case
 });
 
-export type CompleteVisitInput = z.infer<typeof CompleteVisitSchema>;
 
-// --- WORKERS ---
-export const WorkerSchema = z.object({
-  name: z.string().trim().min(1, { message: "Name is required" }),
-  is_partner: z.boolean().default(false),
-  daily_wage: z.coerce.number().min(0).default(0),
-});
-
-export type WorkerInput = z.infer<typeof WorkerSchema>;
