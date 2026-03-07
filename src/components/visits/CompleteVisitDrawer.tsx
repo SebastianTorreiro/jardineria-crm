@@ -11,8 +11,10 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+import { ExpandedVisit } from './VisitCard'
+
 interface CompleteVisitDrawerProps {
-  visit: any
+  visit: ExpandedVisit
   children: React.ReactNode
 }
 

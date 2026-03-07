@@ -38,18 +38,18 @@ export default async function VisitsPage({ searchParams }: PageProps) {
   const datesWithVisits = visits ? visits.map((v: any) => parseLocalDate(v.scheduled_date)) : []
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 pb-20">
+    <div className="flex min-h-screen flex-col bg-background pb-20">
       {/* Sticky Tabs UI */}
-      <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur supports-[backdrop-filter]:bg-gray-50/60 pb-2 pt-4 px-4 border-b border-gray-200">
-        <h1 className="mb-4 text-2xl font-bold text-gray-900">Visitas</h1>
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur pb-2 pt-4 px-4 border-b border-border">
+        <h1 className="mb-4 text-2xl font-bold text-foreground">Visitas</h1>
         
-        <div className="flex space-x-1 rounded-xl bg-gray-200/60 p-1">
+        <div className="flex space-x-1 rounded-xl bg-accent p-1">
           <Link
             href={`/visits?tab=agenda${dateParam ? `&date=${dateParam}` : ''}`}
             className={`flex w-full items-center justify-center rounded-lg py-1.5 text-sm font-medium transition-all ${
               currentTab === 'agenda'
-                ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-card text-primary shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             🗓 Agenda
@@ -58,8 +58,8 @@ export default async function VisitsPage({ searchParams }: PageProps) {
             href={`/visits?tab=history${dateParam ? `&date=${dateParam}` : ''}`}
             className={`flex w-full items-center justify-center rounded-lg py-1.5 text-sm font-medium transition-all ${
               currentTab === 'history'
-                ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-card text-primary shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             📚 Historial
@@ -76,7 +76,7 @@ export default async function VisitsPage({ searchParams }: PageProps) {
         )}
 
         <div className={currentTab === 'agenda' ? "mt-6" : "mt-2"}>
-            <VisitList visits={visits || []} selectedDate={selectedDate} tab={currentTab} />
+            <VisitList visits={(visits || []) as any} selectedDate={selectedDate} tab={currentTab} />
         </div>
       </div>
 

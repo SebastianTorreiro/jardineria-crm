@@ -7,8 +7,18 @@ import { EditVisitDrawer } from './EditVisitDrawer'
 import { DeleteVisitDrawer } from './DeleteVisitDrawer'
 import { Edit2, Trash2 } from 'lucide-react'
 
+import { Database } from '@/types/database.types'
+
+type VisitRow = Database['public']['Tables']['visits']['Row']
+type PropertyRow = Database['public']['Tables']['properties']['Row']
+type ClientRow = Database['public']['Tables']['clients']['Row']
+
+type ExpandedVisit = VisitRow & {
+  properties?: (PropertyRow & { clients?: ClientRow | null }) | null
+}
+
 interface VisitListProps {
-  visits: any[]
+  visits: ExpandedVisit[]
   selectedDate: Date
   tab?: string
 }
@@ -39,51 +49,51 @@ export function VisitList({ visits, selectedDate, tab = 'agenda' }: VisitListPro
           <h3 className="mb-3 font-bold text-gray-800">📅 Pendientes</h3>
           
           {pendingVisits.length === 0 ? (
-             <div className="mb-8 flex flex-col items-center justify-center py-6 text-center text-gray-500 rounded-xl bg-gray-50 border border-dashed border-gray-200">
+             <div className="mb-8 flex flex-col items-center justify-center py-6 text-center text-muted-foreground rounded-xl bg-accent border border-dashed border-border">
                 <p className="text-sm">Nada pendiente por hoy. 🌿</p>
              </div>
           ) : (
             <div className="mb-8">
                 {/* Desktop View */}
-                <div className="hidden sm:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
+                <div className="hidden sm:block overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm">
+                    <table className="min-w-full divide-y divide-border">
+                        <thead className="bg-accent text-accent-foreground">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Hora</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cliente</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Dirección</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Hora</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Cliente</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Dirección</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Acción</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
+                        <tbody className="bg-card divide-y divide-border">
                             {pendingVisits.map((visit) => (
-                                <tr key={visit.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-medium capitalize">
+                                <tr key={visit.id} className="hover:bg-accent/50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium capitalize">
                                         {visit.start_time ? `${visit.start_time} | ` : ''}
                                         {visit.scheduled_date ? formatLocalDate(visit.scheduled_date, 'EEEE d') : '--'}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-medium">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         {visit.properties?.clients?.name || 'Sin asignar'}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                                         {visit.properties?.address || 'Sin asignar'}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                                         <div className="flex items-center justify-end gap-2">
                                             <EditVisitDrawer visit={visit}>
-                                                <button className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50 hover:text-blue-600 transition-colors" title="Editar">
+                                                <button className="flex h-7 w-7 items-center justify-center rounded-full bg-card text-muted-foreground shadow-sm ring-1 ring-inset ring-border hover:bg-accent hover:text-primary transition-colors" title="Editar">
                                                     <Edit2 size={14} />
                                                 </button>
                                             </EditVisitDrawer>
                                             
                                             <DeleteVisitDrawer visit={visit}>
-                                                <button className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-red-50 hover:text-red-600 transition-colors" title="Eliminar">
+                                                <button className="flex h-7 w-7 items-center justify-center rounded-full bg-card text-muted-foreground shadow-sm ring-1 ring-inset ring-border hover:bg-destructive/10 hover:text-destructive transition-colors" title="Eliminar">
                                                     <Trash2 size={14} />
                                                 </button>
                                             </DeleteVisitDrawer>
 
                                             <CompleteVisitDrawer visit={visit}>
-                                                <button className="inline-flex items-center rounded-full bg-white px-3 py-1 text-sm font-medium text-emerald-700 shadow-sm ring-1 ring-inset ring-emerald-600 hover:bg-emerald-50 transition-colors ml-2">
+                                                <button className="inline-flex items-center rounded-full bg-primary px-3 py-1 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90 transition-colors ml-2">
                                                     ✅ Completar
                                                 </button>
                                             </CompleteVisitDrawer>
@@ -112,35 +122,35 @@ export function VisitList({ visits, selectedDate, tab = 'agenda' }: VisitListPro
           <h3 className="mb-3 font-bold text-gray-800">📚 Historial</h3>
           
           {completedVisits.length === 0 ? (
-             <div className="mb-8 flex flex-col items-center justify-center py-6 text-center text-gray-500 rounded-xl bg-gray-50 border border-dashed border-gray-200">
+             <div className="mb-8 flex flex-col items-center justify-center py-6 text-center text-muted-foreground rounded-xl bg-accent border border-dashed border-border">
                 <p className="text-sm">No hay visitas en el historial para esta fecha. 🌿</p>
              </div>
           ) : (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="hidden sm:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm mt-4">
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
+                <div className="hidden sm:block overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm mt-4">
+                    <table className="min-w-full divide-y divide-border">
+                        <thead className="bg-accent text-accent-foreground">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Hora</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cliente</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado / Cobro</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Hora</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Cliente</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Estado / Cobro</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
+                        <tbody className="bg-card divide-y divide-border">
                             {completedVisits.map((visit) => {
                                 const isCompleted = visit.status === 'completed';
                                 return (
-                                    <tr key={visit.id} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-medium capitalize">
+                                    <tr key={visit.id} className="hover:bg-accent/50 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium capitalize">
                                             {visit.start_time ? `${visit.start_time} | ` : ''}
                                             {visit.scheduled_date ? formatLocalDate(visit.scheduled_date, 'EEEE d') : '--'}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-medium">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             {visit.properties?.clients?.name || 'Sin asignar'}
-                                            <div className="text-xs text-slate-500 font-normal">{visit.properties?.address || 'Sin asignar'}</div>
+                                            <div className="text-xs text-muted-foreground font-normal">{visit.properties?.address || 'Sin asignar'}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-left text-sm">
-                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${isCompleted ? 'bg-primary/20 text-primary' : 'bg-destructive/20 text-destructive'}`}>
                                                 {isCompleted ? `Cobrado: $${visit.total_price ?? '0'}` : 'Cancelada'}
                                             </span>
                                         </td>

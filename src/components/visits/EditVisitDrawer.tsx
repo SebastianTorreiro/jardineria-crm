@@ -4,8 +4,10 @@ import { useState } from 'react'
 import { BaseDrawer } from '@/components/ui/BaseDrawer'
 import { EditVisitForm } from '@/components/visits/EditVisitForm'
 
+import { ExpandedVisit } from './VisitCard'
+
 interface EditVisitDrawerProps {
-    visit: any
+    visit: ExpandedVisit
     children: React.ReactNode
 }
 

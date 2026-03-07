@@ -136,6 +136,8 @@ export type Database = {
           notes: string | null
           notes_after_visit: string | null
           tools_used_summary: string | null
+          total_price: number | null
+          direct_expenses: number | null
           created_at: string
           updated_at: string
         }
@@ -152,6 +154,8 @@ export type Database = {
           notes?: string | null
           notes_after_visit?: string | null
           tools_used_summary?: string | null
+          total_price?: number | null
+          direct_expenses?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -168,6 +172,8 @@ export type Database = {
           notes?: string | null
           notes_after_visit?: string | null
           tools_used_summary?: string | null
+          total_price?: number | null
+          direct_expenses?: number | null
           created_at?: string
           updated_at?: string
         }

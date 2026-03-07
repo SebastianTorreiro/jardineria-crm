@@ -1,30 +1,64 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f8fafc; /* slate-50 */
-  --foreground: #064e3b; /* emerald-900 */
-  --primary: #059669; /* emerald-600 */
-  --primary-foreground: #ffffff;
-  --secondary: #ecfdf5; /* emerald-50 */
-  --border: #e2e8f0; /* slate-200 */
-}
-
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
-  --color-emerald-900: #064e3b;
-  --color-emerald-600: #059669;
-  --color-emerald-500: #10b981;
-  --color-slate-50: #f8fafc;
-  --color-slate-200: #e2e8f0;
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
-  @apply bg-slate-50 min-h-screen text-emerald-900;
+:root {
+  --background: #f8fafc; /* slate-50 */
+  --foreground: #022c22; /* emerald-950 */
+  
+  --card: #ffffff;
+  --card-foreground: #022c22;
+  
+  --primary: #059669; /* emerald-600 */
+  --primary-foreground: #ffffff;
+  
+  --secondary: #ecfdf5; /* emerald-50 */
+  --secondary-foreground: #064e3b; /* emerald-900 */
+  
+  --muted: #f1f5f9; /* slate-100 */
+  --muted-foreground: #64748b; /* slate-500 */
+  
+  --accent: #f1f5f9;
+  --accent-foreground: #022c22;
+  
+  --destructive: #ef4444; /* red-500 */
+  --destructive-foreground: #ffffff;
+  
+  --border: #e2e8f0; /* slate-200 */
+  --input: #e2e8f0;
+  --ring: #059669;
+  
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
 }

@@ -22,7 +22,7 @@ export function Calendar({ selectedDate, datesWithVisits }: CalendarProps) {
   }
 
   return (
-    <div className="flex justify-center rounded-xl bg-white p-4 shadow-sm">
+    <div className="flex justify-center rounded-xl bg-card text-card-foreground p-4 shadow-sm border border-border">
       <DayPicker
         mode="single"
         selected={selectedDate}
@@ -32,8 +32,8 @@ export function Calendar({ selectedDate, datesWithVisits }: CalendarProps) {
           hasVisit: datesWithVisits,
         }}
         modifiersClassNames={{
-          hasVisit: 'after:content-[""] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-green-500 after:rounded-full',
-          selected: 'bg-green-600 text-white hover:bg-green-600 hover:text-white focus:bg-green-600 focus:text-white',
+          hasVisit: 'after:content-[""] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full',
+          selected: 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
         }}
         styles={{
           head_cell: { width: '40px', color: '#6b7280' },
@@ -42,9 +42,9 @@ export function Calendar({ selectedDate, datesWithVisits }: CalendarProps) {
         }}
         classNames={{
              caption: 'flex justify-center py-2 relative items-center',
-             caption_label: 'text-sm font-medium text-gray-900',
+             caption_label: 'text-sm font-medium text-foreground',
              nav: 'flex items-center',
-             nav_button: 'h-7 w-7 bg-transparent hover:bg-gray-50 p-1 rounded-md text-gray-500 transition-colors',
+             nav_button: 'h-7 w-7 bg-transparent hover:bg-accent p-1 rounded-md text-muted-foreground transition-colors',
              nav_button_previous: 'absolute left-1',
              nav_button_next: 'absolute right-1',
              head_row: 'flex',

@@ -8,8 +8,10 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 
+import { ExpandedVisit } from './VisitCard'
+
 interface DeleteVisitDrawerProps {
-    visit: any
+    visit: ExpandedVisit
     children: React.ReactNode
 }
 
