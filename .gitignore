@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.agent/cache/
+
+.agent/tmp/
+
+.agent/logs/
+
+.agents/cache/
+
+.agents/tmp/
+
+.agents/logs/
