@@ -14,18 +14,12 @@ export async function createVisit(
     notes?: string | null
   }
 ) {
-    const scheduledDate = new Date(`${data.date}T${data.time}:00`).toISOString()
-
-    // 1. Backend Collision Detection
-    const startOfDay = new Date(`${data.date}T00:00:00`).toISOString()
-    const endOfDay = new Date(`${data.date}T23:59:59.999`).toISOString()
-
+    // 1. Backend Collision Detection on the EXACT same local date to prevent timezone drift
     const { data: dayVisits, error: fetchError } = await supabase
         .from('visits')
         .select('id, scheduled_date, start_time, estimated_duration_mins')
         .eq('organization_id', organizationId)
-        .gte('scheduled_date', startOfDay)
-        .lte('scheduled_date', endOfDay)
+        .eq('scheduled_date', data.date)
 
     if (fetchError) throw fetchError
 
@@ -53,7 +47,7 @@ export async function createVisit(
     const { error } = await supabase.from('visits').insert({
         property_id: data.property_id,
         notes: data.notes,
-        scheduled_date: scheduledDate,
+        scheduled_date: data.date, // Exact YYYY-MM-DD
         start_time: data.start_time,
         estimated_income: data.estimated_income ?? null,
         estimated_duration_mins: data.estimated_duration_mins,
@@ -76,14 +70,55 @@ export async function updateVisit(
     notes?: string | null
   }
 ) {
-    const scheduledDate = new Date(`${data.date}T${data.time}:00`).toISOString()
+    // 1. Fetch current visit to get its duration
+    const { data: currentVisit, error: currentVisitError } = await supabase
+        .from('visits')
+        .select('estimated_duration_mins')
+        .eq('id', data.id)
+        .eq('organization_id', organizationId)
+        .single()
+        
+    if (currentVisitError) throw currentVisitError
+    const durationMins = currentVisit.estimated_duration_mins || 60
+
+    // 2. Fetch other visits on the same exact date for collision detection
+    const { data: dayVisits, error: fetchError } = await supabase
+        .from('visits')
+        .select('id, start_time, estimated_duration_mins')
+        .eq('organization_id', organizationId)
+        .eq('scheduled_date', data.date)
+        .neq('id', data.id)
+
+    if (fetchError) throw fetchError
+
+    const [newHours, newMinutes] = data.time.split(':').map(Number)
+    const newStartMins = newHours * 60 + newMinutes
+    const newEndMins = newStartMins + durationMins
+
+    if (dayVisits) {
+        for (const visit of dayVisits) {
+            const timeString = visit.start_time || '00:00'
+            const [existingHours, existingMinutes] = timeString.split(':').map(Number)
+            const existingStartMins = existingHours * 60 + existingMinutes
+            const existingDuration = visit.estimated_duration_mins || 60
+            const existingEndMins = existingStartMins + existingDuration
+
+            if (newStartMins < existingEndMins && newEndMins > existingStartMins) {
+                return { 
+                    success: false, 
+                    message: "Superposición detectada: Ya hay una visita en ese rango horario." 
+                }
+            }
+        }
+    }
 
     const { error } = await supabase
         .from('visits')
         .update({
             property_id: data.property_id,
             notes: data.notes,
-            scheduled_date: scheduledDate
+            scheduled_date: data.date,
+            start_time: data.time
         })
         .match({ id: data.id, organization_id: organizationId, status: 'pending' })
 
