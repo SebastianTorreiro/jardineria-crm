@@ -15,6 +15,8 @@ export async function createOrganization(formData: FormData) {
   if (!user) {
     redirect('/login')
   }
+  
+  
 
   // 2. Call RPC create_organization_for_user
   const { error } = await createOrganizationForUser(supabase, name)
