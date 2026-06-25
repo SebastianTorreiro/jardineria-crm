@@ -70,3 +70,12 @@ export async function getDashboardMetrics(supabase: SupabaseClient<Database>, or
         alerts
     }
 }
+
+export async function getAuthUser(supabase: SupabaseClient<Database>) {
+    const { data: { user } } = await supabase.auth.getUser()
+    return user
+}
+
+export function getUserDisplayName(user: any): string {
+    return user?.user_metadata?.name?.split(' ')[0] || 'Usuario'
+}

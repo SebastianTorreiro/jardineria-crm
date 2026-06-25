@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserOrganization } from '@/utils/supabase/queries'
 import { redirect } from 'next/navigation'
-import { getDashboardMetrics } from '@/lib/services/dashboard-service'
+import { getAuthUser, getDashboardMetrics, getUserDisplayName } from '@/lib/services/dashboard-service'
 import { 
   Users, 
   CalendarDays, 
@@ -24,9 +24,8 @@ export default async function DashboardPage() {
       redirect('/onboarding')
   }
 
-  const { data: { user } } = await supabase.auth.getUser()
-  const userName = user?.user_metadata?.name?.split(' ')[0] || 'Usuario'
-
+  const user_info = await getAuthUser(supabase)
+  const userName = getUserDisplayName(user_info)
   // Fetch Dashboard Metrics through Service Layer
   const metrics = await getDashboardMetrics(supabase, organizationId)
 

@@ -173,3 +173,79 @@ En dashboard/page.tsx y en lib/services/dashboard-service.ts Si hay dry de logic
 En home/page.tsx la funcion componente HomePage no se puede testear en aislamiento porque tiene como dependencia externa la creacion de cliente de supabase, un llamada a supabase para obtener el organizationId y Otra llamada a una tabla de la base de datos.
 
 HomePage en home/page.tsx no se puede testear en aislamiento porque tiene infraestructura hardcodeada: crea el cliente de Supabase internamente, resuelve el organizationId internamente, y ejecuta las queries internamente. Un test no puede reemplazar ninguna de esas dependencias sin levantar Supabase real. Esto indica acoplamiento directo a la infraestructura — el mismo problema que el Día 3, ahora visto desde el ángulo de la testabilidad.
+
+                                                    #### DIA 10 ####
+
+ # Diagnostico de finances/page.tsx y actions.ts (el segundo no lo revise, pero en el feedback aparece eso como correccion)
+
+SRP: se me mezcla un poco con el 3 de capas diria que se mezcla responsabilidades de negocio, pero yendo a la responsabilidades en si, si cambio la libreria para manejar fechas, cambia el archivo, si cambio como se manejan las pegadas a la api, cambiar el archivo y si quiero cambiar lo que voy a renderizar cambia el archivo. 
+
+Acoplamiento: Esto me cuesta un poco mas verlo en este archivo, lo mismo, siento que se me mezcla con la separacion de capas, pero me hace ruido la promise.all. si bien no usa supabase directamente y usa una funcion del actions.ts esto deberia hacerse en un componente previo al componente presentacional. pero esto creo que no es acoplamiento. 
+
+Separacion de capas: Aca puedo ver 3 capas claramente mezcladas. Toda la logica de calculo de fechas es capa de negocio, la peticion a la api es capa de datos y el return que es la capa de presentacion. 
+
+Naming: Dentro de todo es lo que menos errores veo, en la linea 21 cambiaria el now por today tal vez, para ser mas claros, pero no creo que cambie mucho.
+
+DRY: Esto creo que no sucede. 
+
+Testeabilidad: creo que si, porque si bien hace llamadas a una supabase es a travez de una funcion, no directamente entonces se podria mockear sin levantar supabase. 
+
+Dame feedback genuino y que tengo que reforzar, tambien ayudame a leer y entender el archivo para ver que me falto y capaz podemos hacer lo mismo en otro archivo, para seguir practicando.
+
+# Diagnóstico corregido para el log
+
+SRP — CORRECTO. Tres razones para cambiar: librería de fechas, forma de obtener datos, diseño visual.
+Acoplamiento — INCOMPLETO. page.tsx está acoplado a los nombres concretos de las tres actions. actions.ts tiene acoplamiento interno — tres funciones acopladas a createClient y getUserOrganization hardcodeados.
+Separación de capas — CORRECTO. Lógica de fechas (negocio) + fetch (datos) + JSX (presentación) en el mismo componente.
+Naming — CORRECTO pero superficial. now → today es válido. Lo que no viste: resolvedParams es un nombre genérico — ¿resueltos de qué? pageSearchParams o financesParams diría más.
+DRY — INCORRECTO. Hay repetición real en actions.ts: el bloque createClient + getUserOrganization se repite en tres funciones.
+Testabilidad — PARCIAL. page.tsx sí está mejor abstraído. actions.ts no es testeable en aislamiento — createClient() hardcodeado adentro de cada función.
+
+
+
+
+# Diagnostico de (dashboard)/page.tsx
+
+SRP: tiene varias razones para cambiar, si cambio de base de datos cambia, si cambio informacion para renderizar cambia si cambio nombre de funciones del service tambien, pero nose como se podria corregir eso, aunque hasta ahora la idea es solo analizar. 
+
+Acoplamiento: Claramente hay acoplamiento aca, se instancia la base de datos directamente en este archivo, se llama a la funcion que obtiene el OrganizationId. Si cambio la base de datos cambio este archivo tambien. 
+
+Separacion de capas. aca hay claramente 2 capas: datos y presentacional. logica de negocio no veo. 
+
+Naming: linea 31 metrics puede ser medio general, metricas de que?.
+linea 27 ponerle solo user puede ser tambien general, pondria InfoUser pero creo que es hilar fino. 
+
+DRY: veo dry en la parte presentacional veo un grid que tiene 3 divs identicos adentro y abajo tambien otro grid con 4 links muy similares adentro. 
+
+Testeabilidad: No, no se puede testear sin levantar supabase porque tiene a supabase instanciada directamente en el archivo. 
+
+# Diagnóstico corregido para el log
+
+
+Diagnóstico externo — comparación punto por punto
+SRP — CORRECTA, con un matiz
+Lo que dijiste está bien. El matiz: "si cambio nombre de funciones del service también cambia" — eso no es SRP, es acoplamiento. No los mezcles en el mismo punto. SRP acá es: cambia el diseño → toco este archivo. Cambia cómo se obtiene el usuario → toco este archivo. Cambia la fuente de datos → toco este archivo. Tres dueños distintos, una sola función.
+
+Acoplamiento — CORRECTA pero incompleta
+Viste createClient() y getUserOrganization() hardcodeados — bien. Lo que no marcaste:
+typescriptconst { data: { user } } = await supabase.auth.getUser()
+const userName = user?.user_metadata?.name?.split(' ')[0] || 'Usuario'
+Esta lógica de extraer el nombre del usuario está hardcodeada directamente en el componente. Conoce la estructura interna de user_metadata — sabe que existe name, sabe que hay que hacer .split(' ')[0]. Si Supabase cambia cómo guarda el nombre en metadata, tocás el componente de presentación. Eso es acoplamiento a la estructura interna de un objeto externo.
+
+Separación de capas — INCOMPLETA
+Dijiste "lógica de negocio no veo" — pero acabás de describirla en el punto anterior sin nombrarlo así:
+typescriptconst userName = user?.user_metadata?.name?.split(' ')[0] || 'Usuario'
+¿Qué define que el nombre a mostrar es el primer elemento del nombre completo? ¿Qué define que si no hay nombre se muestra 'Usuario'? Esas son reglas de negocio — decisiones sobre cómo se presenta la identidad del usuario en esta aplicación. No son presentación pura ni son datos crudos. Están en la capa incorrecta.
+
+Naming — CORRECTA, y bien calibrada
+metrics es genérico — dashboardMetrics o todayMetrics diría más. user está bien cuestionarlo — currentUser o authenticatedUser sería más preciso. No es hilar fino, es exactamente lo que el Día 5 entrenó.
+
+DRY — CORRECTA
+Los dos grids con estructura repetida — bien visto. Es el mismo caso del layout.tsx del Día 8: DRY de presentación. La solución sería un array de configuración + .map() para las Quick Actions, igual que el nav.
+
+Testabilidad — CORRECTA
+createClient() hardcodeado adentro — no hay por dónde mockear sin Supabase real. Mismo patrón que home/page.tsx del Día 9.
+
+Lo que la comparación revela
+Viste bien: SRP, acoplamiento base, naming, DRY, testabilidad. Tu hueco hoy fue separación de capas — no la viste porque la lógica de negocio era pequeña y estaba mezclada con lo que parecía solo manipulación de datos. Esa es exactamente la forma en que aparece en código real: no es un bloque grande con cartel de "lógica de negocio", son líneas sueltas escondidas entre el resto.
+Anotá en el log: "cuando la lógica de negocio es una sola línea, es más fácil confundirla con manipulación de datos — buscar la pregunta '¿cambiaría esto si cambia una regla del negocio?' antes de descartar la capa".
