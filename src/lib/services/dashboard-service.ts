@@ -67,7 +67,8 @@ export async function getDashboardMetrics(supabase: SupabaseClient<Database>, or
         totalVisitsToday,
         totalIncome,
         todayVisits: todayVisits.data || [],
-        alerts
+        alerts,
+        hasLowStockAlerts: alerts.length > 0
     }
 }
 

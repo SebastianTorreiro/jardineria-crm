@@ -1,17 +1,17 @@
-import { createClient } from '@/utils/supabase/server'
-import { getUserOrganization } from '@/utils/supabase/queries'
-import { redirect } from 'next/navigation'
+import { VisitCard } from '@/components/visits/VisitCard'
 import { getAuthUser, getDashboardMetrics, getUserDisplayName } from '@/lib/services/dashboard-service'
-import { 
-  Users, 
-  CalendarDays, 
-  DollarSign, 
-  Briefcase, 
+import { getUserOrganization } from '@/utils/supabase/queries'
+import { createClient } from '@/utils/supabase/server'
+import {
+  AlertTriangle,
+  Briefcase,
+  CalendarDays,
+  DollarSign,
   Receipt,
-  AlertTriangle 
+  Users
 } from 'lucide-react'
 import Link from 'next/link'
-import { VisitCard } from '@/components/visits/VisitCard'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,15 +19,14 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const organizationId = await getUserOrganization(supabase)
 
-  // Onboarding Check
   if (!organizationId) {
       redirect('/onboarding')
   }
 
+  const metrics = await getDashboardMetrics(supabase, organizationId)
+
   const user_info = await getAuthUser(supabase)
   const userName = getUserDisplayName(user_info)
-  // Fetch Dashboard Metrics through Service Layer
-  const metrics = await getDashboardMetrics(supabase, organizationId)
 
   return (
     <div className="flex flex-col gap-8 p-4 pb-24 md:p-8 bg-background min-h-screen">
@@ -88,7 +87,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Low Stock Alerts */}
-          {metrics.alerts.length > 0 && (
+          {metrics.hasLowStockAlerts && (
               <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 shadow-sm">
                   <h2 className="text-lg font-semibold text-destructive mb-4 flex items-center gap-2">
                       <AlertTriangle className="h-5 w-5 text-destructive" />

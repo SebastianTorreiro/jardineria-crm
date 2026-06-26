@@ -201,7 +201,7 @@ Naming — CORRECTO pero superficial. now → today es válido. Lo que no viste:
 DRY — INCORRECTO. Hay repetición real en actions.ts: el bloque createClient + getUserOrganization se repite en tres funciones.
 Testabilidad — PARCIAL. page.tsx sí está mejor abstraído. actions.ts no es testeable en aislamiento — createClient() hardcodeado adentro de cada función.
 
-
+                                                    #### DIA 11 ####
 
 
 # Diagnostico de (dashboard)/page.tsx
@@ -249,3 +249,11 @@ createClient() hardcodeado adentro — no hay por dónde mockear sin Supabase re
 Lo que la comparación revela
 Viste bien: SRP, acoplamiento base, naming, DRY, testabilidad. Tu hueco hoy fue separación de capas — no la viste porque la lógica de negocio era pequeña y estaba mezclada con lo que parecía solo manipulación de datos. Esa es exactamente la forma en que aparece en código real: no es un bloque grande con cartel de "lógica de negocio", son líneas sueltas escondidas entre el resto.
 Anotá en el log: "cuando la lógica de negocio es una sola línea, es más fácil confundirla con manipulación de datos — buscar la pregunta '¿cambiaría esto si cambia una regla del negocio?' antes de descartar la capa".
+
+
+                                                    #### DIA 12 ####
+ DashboardPage evalúa metrics.alerts.length > 0 en el JSX — esa es una regla de negocio en la capa de presentación. Debería ser un booleano hasLowStockAlerts calculado en el service. El componente renderiza, no decide.
+
+
+ 
+                                                    
