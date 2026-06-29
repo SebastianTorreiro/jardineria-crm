@@ -30,11 +30,6 @@ export async function getClients(query?: string) {
 
 export const createClientAction = createSafeAction(
   ClientSchema.extend({
-      // Extra fields for the property creation in the same transaction logic if needed
-      // But the schema matches the form input.
-      // Wait, the original action also mapped properties.
-      // The prompt said "createClientAction" takes name, phone, address, frequency.
-      // So we need a combined schema or just extend it here.
       address: z.string().trim().min(1, { message: "Address is required" }),
       frequency: z.coerce.number().int().positive().nullable().optional(),
   }), 
@@ -58,7 +53,7 @@ export async function getClientDetails(clientId: string) {
 
 const UpdateClientSchema = ClientSchema.extend({
     id: z.string().uuid(),
-    property_id: z.string().uuid().optional(), // Needed to know which property to update
+    property_id: z.string().uuid().optional(),
     address: z.string().trim().min(1, { message: "Address is required" }),
     frequency: z.coerce.number().int().positive().nullable().optional(),
 })

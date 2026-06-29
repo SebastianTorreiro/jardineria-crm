@@ -255,5 +255,164 @@ Anotá en el log: "cuando la lógica de negocio es una sola línea, es más fác
  DashboardPage evalúa metrics.alerts.length > 0 en el JSX — esa es una regla de negocio en la capa de presentación. Debería ser un booleano hasLowStockAlerts calculado en el service. El componente renderiza, no decide.
 
 
- 
-                                                    
+                                                     #### DIA 13 ####
+
+La diferencia es que ahora tengo un criterio de evaluacion para el codigo mas alla de la funcion especifica del mismo. El primer dia describi el funcionamiento entero del codigo pero sin criterio extra. Ahora puedo ver de forma mas estructural o de forma mas analitica otro significado del codigo por decirlo de alguna forma.                                               
+
+                                                     #### DIA 14 ####
+# Analisis completo de clients/page.tsx , actions.ts y clients/[id]/page.tsx
+
+SRP:
+client/page.tsx:
+No veo srp claro aca. 
+
+client/action.ts:
+Aca el action sabe de schemas y de supabase lo cual es mas del repository que del service/action entonces si cambio de db o algun schema, esto cambia. 
+
+client/page.tsx/id:
+Aca se busca informacion del cliente y se renderiza el componente entero en el mismo archivo, si alguna de las dos cosas se quiere cambiar el archivo cambia. SRP. 
+
+Una consulta. la No separacion de capas, es un causante de srp, no? porque se me mezclan mucho y quiero entender porque. 
+
+Acoplamiento:
+client/page.tsx:
+
+Aca no veo acoplamiento, porque en la parte de logica solo saca los parametros con searchparams y usa una funcion del service, no llama directamente desde aca. 
+
+client/action.ts:
+
+Conoce internamente al schema y lo extiende y a la vez se comunica directamente con la db. Misma razon que antes al creer que no esta del todo mal, pero es service y repository mezclado en 1 archivo.
+
+client/page.tsx/id:
+
+Aca no veo acoplamiento.
+
+Separacion de capas:
+
+client/page.tsx: No veo capaz juntas, esta seria la capa presentacional. Si bien pide informacion en vez de recibirla por parametros, nose si habria que hacer un archivo intermedio solo para estas 3 lineas de codigo:
+
+  const searchParams = await props.searchParams
+  const query = searchParams.q || ''
+  const clients = await getClients(query)
+Si deberia, corregime.
+
+client/action.ts:
+
+Aca hay 2 "cosas" marcadas anteriormente que son service y repository que pertenecen a la capa de datos, la pregunta deberia ser, hay logica de negocio en este archivo? Yo creo que no.
+
+client/page.tsx/id:
+
+Aca lo mismo que el caso anterior (page.tsx) Si bien busca informacion antes de dedicarse a la capa presentacional, lo hace a travez de funciones. Repito la pregunta, esto igual deberia separarse? como se hace esto de forma ideal?
+
+Naming:
+client/page.tsx:
+
+const query = searchParams.q || ''
+este lo cambiaria por Searc_query para ser mas preciso. 
+pero no mucho mas.
+
+client/action.ts:
+
+En este hay que tener cuidado porque son mucho nombre parecido asique hay que ser especifico
+
+export const updateClient ....
+lo cambiaria por updateClientProperty.
+
+client/page.tsx/id:
+
+const data = await getClientDetails(id)
+Aca le pondria ClientsDetail
+
+DRY:
+client/page.tsx:
+No hay DRY
+
+client/action.ts:
+
+repite 
+
+  const supabase = await createClient()
+  const organizationId = await getUserOrganization(supabase)
+pero solo 2 veces, nose si viola DRY. tal vez deberia crearse solo 1 vez en el scope global del archivo ? Si es asi, serian ambas lineas? 
+
+client/page.tsx/id:
+Aca tampoco parece haber DRY
+
+Testeabilidad:
+Mi problema con testeabilidad es que lo tengo muy relacionado solo a si algo esta conectado a la db, pero ahora relei y veo que esta muy relacionado al acoplamiento tambien por lo tanto.
+
+client/page.tsx:
+Testeable. Se mockean la info que pide y se testea
+
+client/action.ts:
+Aca si bien esta conectado a supabase y lo invoca 2 veces, no hace las querys directamente desde aca. Si usa los schemas directos, eso podria joder para la testeabilidad? 
+
+client/page.tsx/id:
+Testeable. Se mockean la info que pide y se testea
+
+# Devolucion:
+
+client/page.tsx
+SRP — Dijiste "no veo SRP claro acá". Incompleto. El componente obtiene datos (getClients) Y renderiza. Si cambia cómo se obtienen los clientes — cambia. Si cambia el diseño — cambia. Dos razones, SRP violado. Es sutil porque son pocas líneas, pero el principio aplica igual.
+Acoplamiento — CORRECTA. Usa getClients sin conocer sus internals. Bien visto.
+Separación de capas — Preguntaste si habría que separar esas 3 líneas en un archivo intermedio. La respuesta es: depende de la complejidad. En este caso son 3 líneas simples — crear una capa extra solo para esto sería over-engineering. El criterio es: ¿hay lógica de negocio mezclada? Acá no — searchParams.q || '' es manejo de input, no regla de negocio. Está aceptable por ahora.
+Naming — query → searchQuery es correcto. Buen ojo.
+DRY — CORRECTA. No hay repetición.
+Testabilidad — CORRECTA. getClients es mockeable, el componente es testeable.
+
+client/actions.ts
+SRP — CORRECTA. Mezclá validación de schema, lógica de aplicación y acceso a Supabase. Tres razones para cambiar en el mismo archivo.
+Acoplamiento — CORRECTA en la dirección. El matiz: no es solo "service y repository mezclado" — es que el archivo conoce directamente la estructura del schema Y la API de Supabase. Dos acoplamientos distintos apilados.
+Separación de capas — Preguntaste "¿hay lógica de negocio?" — buena pregunta. Mirá esto:
+typescript// ¿Esto es solo datos o hay una regla de negocio acá?
+if (!organizationId) return { error: 'No organization found' }
+Esa decisión — qué pasa cuando no hay organización — es una regla de negocio disfrazada de guard clause. Es exactamente el mismo patrón del userName.split(' ')[0] del Día 12: lógica de negocio en una línea suelta.
+Naming — updateClient → updateClientProperty no es una mejora clara. updateClient describe bien la operación. Lo que sí es un problema real en actions.ts es que hay funciones que se llaman igual que las del service con prefijos importados:
+typescriptimport { createClient as createClientService } from '...'
+Ese alias forzado es señal de naming collision — dos cosas distintas con nombres demasiado parecidos.
+DRY — Encontraste el patrón repetido de createClient + getUserOrganization. CORRECTA. Y respondiste bien tu propia pregunta — no se puede mover al scope global porque son llamadas async. La solución real es extraerlo a una función helper, igual que hicimos con getAuthUser en el Día 11.
+Testabilidad — Preguntaste si los schemas afectan la testabilidad. Sí — si el schema está hardcodeado adentro de la función, un test tiene que respetar esa estructura o mockear el validador entero. Más acoplamiento = menos testeable. Tu intuición era correcta.
+
+client/[id]/page.tsx
+SRP — CORRECTA. Busca datos Y renderiza. Dos razones para cambiar.
+Acoplamiento — Dijiste "no veo acoplamiento" — revisalo. Hay esto:
+typescriptconst data = await getClientDetails(id)
+Y después en el JSX accedés a data.client, data.visits, etc. El componente conoce la estructura interna del objeto que devuelve getClientDetails. Si esa función cambia cómo organiza su respuesta — el JSX se rompe. Eso es acoplamiento a la estructura del retorno.
+Separación de capas — Misma respuesta que client/page.tsx — las líneas de obtención de datos son pocas y sin lógica de negocio visible. Aceptable. Pero preguntá lo mismo que antes: ¿hay alguna línea en el JSX que tome una decisión de negocio? Revisá los ternarios — suelen esconder lógica de negocio disfrazada de presentación.
+Naming — data → clientDetails CORRECTA y es la más importante. data es el nombre más genérico posible — no dice nada sobre qué contiene.
+DRY — CORRECTA.
+Testabilidad — CORRECTA en la conclusión, pero la justificación es incompleta. No es solo "se mockea la info" — es que getClientDetails recibe id como parámetro, entonces un test puede llamarla con cualquier id sin tocar Supabase. Eso es testeable por diseño, no solo por mockeo.
+
+Tu pregunta transversal — separación de capas y SRP
+Preguntaste si la no separación de capas causa SRP. La respuesta es: son síntomas del mismo problema, no causa y efecto.
+Cuando un componente mezcla capas, automáticamente tiene múltiples razones para cambiar — una por cada capa que mezcla. Por eso se sienten tan parecidos: SRP te dice cuántas razones para cambiar, separación de capas te dice qué tipo de razones. Son dos lentes distintos mirando el mismo código.
+
+Resumen de tu diagnóstico
+Lo que viste bien: acoplamiento en actions.ts, DRY en actions.ts, naming en los tres archivos, testabilidad general.
+Lo que te costó: ver SRP cuando el componente es simple, ver acoplamiento en el retorno de funciones, ver lógica de negocio en guard clauses de una línea.
+
+
+# SRP te dice Cuantas "Razones" hay para cambiar, y generalmente cada una de esas razones son una capa distinta #
+
+
+
+                                                     #### DIA 16 ####
+# Cohesion
+La cohesión mide qué tan relacionadas están las cosas que viven dentro de un mismo componente o módulo. Es una métrica de unión y enfoque.
+
+Alta Cohesión (Lo ideal): Todo el código que está dentro del componente trabaja en equipo para lograr un único objetivo muy específico. Si sacaras una línea de ahí, el componente dejaría de tener sentido.
+
+Baja Cohesión (El problema): El componente es un "cajón de sastre" donde metiste cosas que no se parecen entre sí, solo porque se ejecutan en el mismo momento.
+
+archivo: app/(dashboard)/visits/page.tsx:
+
+Tiene 3 capas diferentes: 
+capa de datos: const visits = await getVisits(start, end)
+
+capa de negocios: const pending = visits.filter(v => v.status === 'pending')
+
+capa de UI: El return. 
+
+3 razones distintas para cambiar -> baja cohesion. Viola SRP. 
+
+
