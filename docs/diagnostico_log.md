@@ -416,3 +416,136 @@ capa de UI: El return.
 3 razones distintas para cambiar -> baja cohesion. Viola SRP. 
 
 
+                                                     #### DIA 17 ####
+# Tell, Don't Ask
+
+Tell, Don't Ask (Dilo, no preguntes) es un principio de diseño de software que establece que debes ordenarle a un módulo o componente que ejecute una acción, en lugar de preguntarle por su estado interno para luego decidir vos qué hacer desde afuera.
+
+Se entiende mejor contrastando los dos enfoques:
+
+El Anti-patrón: "Preguntar y Actuar" (Anémico)
+Cuando violas TDA, tu flujo mental y tu código hacen esto:
+
+Llamas al componente y le preguntas sus datos internos.
+
+Evaluás esos datos en tu servicio o función externa (hacés la lógica ahí).
+
+Le decís al componente cómo modificar su estado basado en tu decisión externa.
+
+❌ El peligro: La lógica de cómo debe comportarse ese componente se fugó. Ahora, cualquier otra parte de la aplicación que quiera hacer algo similar tiene que repetir esa misma evaluación. Baja cohesión total.
+
+El Patrón Correcto: "Ordenar la Acción" (Cohesivo)
+Con TDA, respetás la autonomía del componente:
+
+No te importa cómo está estructurado por dentro ni qué variables tiene.
+
+Solo le ordenás que haga el trabajo enviándole un comando claro.
+
+El componente, que es el dueño de sus datos, decide internamente cómo reaccionar.
+
+La analogía del restaurante: No entrás a la cocina de un restaurante a preguntar cuánta carne queda, cuánta sal hay, evaluar si alcanza para un plato y luego ponertelo a cocinar vos mismo. Vas al mozo y le decís: "Traeme una milanesa". La cocina sabe cómo resolverlo internamente.
+
+El código que cambia junto, vive junto (Alta Cohesión). El código que no sabe por qué va a cambiar, no toma decisiones (TDA). El código cambia solo cuando su actor responsable lo decide (SRP).
+
+
+
+Acceso encontrado                                               Archivo               Quién debería resolverlo
+visit.properties?.clients?.name
+ || 'Sin asignar'
+                                                          dashboard/page.tsx
+                                                                                           Capa de negocio — debería entregar un objeto ya resuelto ({ clientName, address }) al componente
+
+
+
+
+                                                     #### DIA 18 ####
+
+#### DIA 18 ####
+
+# Logica de negocio en guard clauses
+
+Guard clause: DashboardPage -> if (!organizationId) redirect('/onboarding')
+Capa real: Negocio (mal ubicada en presentacion)
+Nombre si fuera funcion propia: redirectIfIncompleteOnboarding()
+
+Guard clause: getClients -> if (!organizationId) throw new Error('No organization found')
+Capa real: Negocio
+Nombre si fuera funcion propia: assertOrganizationExists()
+
+Guard clause: getClientDetails -> if (!organizationId) return null
+Capa real: Negocio, pero con perdida de informacion (null ambiguo: no distingue "no existe" de "sin org" de "sin permiso")
+Nombre si fuera funcion propia: resolveClientAccess() (deberia devolver razon explicita, no null desnudo)
+
+Guard clause: componente -> if (!organizationId) return <div>Error: No se encontro la organizacion.</div>
+Capa real: Negocio (mal ubicada en presentacion)
+Nombre si fuera funcion propia: renderMissingOrganizationState()
+
+Guard clause: getFinancialSummary -> return { totalRevenue: 0, totalDirectExpenses: 0, totalGeneralExpenses: 0, netMargin: 0 }
+Capa real: Negocio
+Nombre si fuera funcion propia: emptyFinancialSummary()
+
+Guard clause: getProfitDistributionSummary -> return []
+Capa real: Negocio
+Nombre si fuera funcion propia: emptyProfitDistribution()
+
+Guard clause: getExpenses -> return []
+Capa real: Negocio
+Nombre si fuera funcion propia: emptyExpensesList()
+
+# Patron detectado
+La misma condicion (!organizationId) se resuelve de 4 formas distintas (redirect, throw, null, valores vacios hardcodeados) repartidas en 7 lugares, sin una regla centralizada. Cada funcion decidio por separado que significa "sin organizacion" en su contexto, algunas perdiendo informacion en el camino (el null de getClientDetails). El hueco no es falta de manejo de errores — es falta de una regla de dominio explicita y nombrada para ese estado, con cada capa reaccionando conscientemente en vez de por inercia copy-paste.
+
+
+                                                     #### DIA 19 ####
+
+# Testabilidad: criterio mas fino
+
+El criterio no es solo "usa base de datos o no" sino "que tan aislada esta la unidad que testeo". Una funcion pura es testeable unitariamente. Una funcion que orquesta servicios es testeable a nivel integracion. Una funcion cuya logica depende de que la infraestructura real responda de cierta forma (schema, columnas, joins) necesita e2e.
+
+# Los 3 tipos de test, explicados completos
+
+## Unit test
+Que busca testear: una unidad de codigo aislada, sin ninguna dependencia externa (nada de red, DB, filesystem, ni siquiera mocks). Se le da un input y se compara el output esperado.
+Requisito para que una funcion sea unit-testeable: que sea una funcion pura o casi pura, sin llamadas async a servicios externos, sin efectos secundarios que dependan del entorno.
+Costo: el mas barato y rapido de todos. Se corre en milisegundos, no necesita nada levantado.
+Diferencia con integration: integration SI necesita simular (mockear) algo externo. Unit no necesita mockear nada porque no hay nada externo que reemplazar.
+Ejemplo del proyecto: getUserDisplayName(user) -> sin llamadas externas, output 100% determinado por el input.
+
+## Integration test
+Que busca testear: que la orquestacion de la funcion sea correcta, es decir, que la logica propia de la funcion (calculos, transformaciones, decisiones) funcione bien asumiendo que las dependencias externas responden como se espera. Se reemplazan esas dependencias por mocks/fakes controlados por el que escribe el test.
+Requisito: la funcion depende de algo externo (DB, API, otro service), pero ese algo se puede reemplazar por una version fake sin perder la validez del test.
+Costo: mas caro que unit (hay que armar mocks), pero no requiere levantar infraestructura real. Se puede correr seguido, en cada commit.
+Diferencia con unit: aca SI hay dependencias externas, pero se controlan con mocks.
+Diferencia con e2e: un integration test puede pasar 100% aunque la query real tenga un error (nombre de columna mal escrito, por ejemplo), porque el mock no lo sabe. Testea la logica propia, no si la infraestructura real esta bien conectada.
+Ejemplo del proyecto: getAuthUser(supabase) -> se mockea supabase.auth.getUser() y se testea el comportamiento de la funcion con distintos escenarios (usuario logueado, no logueado, error).
+
+## E2E test (end-to-end)
+Que busca testear: que todo el sistema funcione integrado de punta a punta, con la infraestructura real corriendo (Supabase real, Docker, base de datos real). Confirma que las queries estan bien escritas contra el schema real, que los joins resuelven bien, que los filtros (ej. organization_id) realmente aislan los datos como corresponde.
+Requisito: la funcion o el flujo necesita infraestructura real levantada para validarse, no alcanza con un mock porque lo que se quiere probar es justamente la conexion con esa infraestructura.
+Costo: el mas caro y lento de los tres. Necesita el entorno levantado (DB, servicios). No conviene correrlo en cada commit, se reserva para validaciones finales o pipelines mas espaciados.
+Diferencia con integration: e2e detecta errores que un mock no puede detectar (typos en columnas, cambios de schema, permisos reales de RLS). A cambio, es mucho mas lento y costoso de mantener y correr.
+Ejemplo del proyecto: getDashboardMetrics -> las 5 queries del Promise.all necesitan validarse contra el schema real de Supabase para confirmar que estan bien escritas.
+
+# Orden de ejecucion recomendado (por costo)
+1. Unit tests -> se corren siempre, en cada cambio, son gratis en tiempo.
+2. Integration tests -> se corren seguido tambien, mockeando dependencias, mas caros que unit pero no requieren nada levantado.
+3. E2E tests -> se corren con menos frecuencia (antes de un deploy, en un pipeline mas espaciado), son la confirmacion final de que todo conectado funciona de verdad.
+
+# Entregable - Tabla de clasificacion (dashboard-service.ts)
+
+Funcion: getUserDisplayName
+Tipo de test: Unit
+Dependencia que lo determina: Ninguna, funcion pura, output 100% determinado por el input
+
+Funcion: getAuthUser
+Tipo de test: Integration
+Dependencia que lo determina: necesita mock de supabase.auth.getUser(); sin logica propia pero no aislable sin reemplazar esa dependencia
+
+Funcion: getDashboardMetrics
+Tipo de test: Integration (para la logica de agregacion) + E2E (para validar las 5 queries contra el schema real)
+Dependencia que lo determina: el Promise.all con 5 queries reales a Supabase, mockeable para testear el calculo posterior (totalClients, alerts, reduce), pero requiere DB real para validar que las queries en si son correctas
+
+
+
+
+
