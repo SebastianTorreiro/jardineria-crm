@@ -546,6 +546,33 @@ Tipo de test: Integration (para la logica de agregacion) + E2E (para validar las
 Dependencia que lo determina: el Promise.all con 5 queries reales a Supabase, mockeable para testear el calculo posterior (totalClients, alerts, reduce), pero requiere DB real para validar que las queries en si son correctas
 
 
+                                            (dias 20 y 21, colchon y checkpoint)
+                                                     #### DIA 22 ####
 
 
+# dashboard-repository.ts
+countClients(supabase, organizationId) 
+  → cuenta clientes de la organización
 
+countVisitsToday(supabase, organizationId, today)
+  → cuenta visitas de hoy (excluye canceladas)
+
+getMonthlyIncomeRaw(supabase, organizationId, firstDayOfMonth, lastDayOfMonth)
+  → trae real_income de visitas completadas del mes
+
+getTodayVisitsDetail(supabase, organizationId, today)
+  → trae detalle completo con joins (properties, clients)
+
+getSuppliesRaw(supabase, organizationId)
+  → trae todos los supplies de la organización
+
+
+# dashboard-service.ts
+getDashboardMetrics(supabase, organizationId)
+  → calcula today, firstDayOfMonth, lastDayOfMonth
+  → llama a las 5 funciones del repository (Promise.all)
+  → aplica reglas de negocio:
+      - totalIncome = reduce sobre monthlyIncome
+      - alerts = filter sobre supplies (current_stock < min_stock) ← regla de negocio con nombre propio
+      - hasLowStockAlerts = alerts.length > 0
+  → retorna el objeto final ya armado para la UI
