@@ -11,7 +11,6 @@ import {
     getExpenses as getExpensesService
 } from '@/lib/services/finance-service'
 
-// Actions
 
 export const createExpense = createSafeAction(ExpenseSchema, async (data, ctx) => {
     try {
@@ -30,7 +29,6 @@ export const createExpense = createSafeAction(ExpenseSchema, async (data, ctx) =
     return { success: true, message: 'Gasto registrado correctamente' }
 })
 
-// Data Dispatchers
 export async function getFinancialSummary(month: number, year: number) {
     const supabase = await createClient()
     const organizationId = await getUserOrganization(supabase)

@@ -74,7 +74,6 @@ export async function getMonthlyFinancialSummary(
 
     if (payouts) {
         for (const p of payouts) {
-            // @ts-ignore - Supabase join typing workaround
             const workerName = p.workers?.name || 'Unknown'
             
             const existing = payoutsMap.get(p.worker_id)
@@ -147,3 +146,27 @@ export async function getExpenses(
 
     return data || []
 }
+
+
+/*
+Observaciones:
+1. La función `getMonthlyFinancialSummary` realiza varias consultas a la base de datos para obtener un resumen financiero mensual,
+ incluyendo ingresos, gastos directos, gastos generales y distribución de pagos a socios.
+ Se asegura de manejar correctamente los casos en los que no hay datos disponibles.
+
+2. La función `createExpense` permite registrar un nuevo gasto en la base de datos,
+ asegurándose de que los datos proporcionados sean válidos y 
+ manejando cualquier error que pueda ocurrir durante la inserción.
+3. La función `getExpenses` recupera todos los gastos de una organización para un mes y año específicos,
+ ordenándolos por fecha y hora de creación.
+4. Se utilizan tipos TypeScript para garantizar la seguridad de tipos y mejorar la legibilidad del código.
+5. Se manejan correctamente los casos en los que no hay datos disponibles, 
+devolviendo valores predeterminados o listas vacías según corresponda.
+
+
+
+
+
+
+
+*/

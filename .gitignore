@@ -51,3 +51,6 @@ next-env.d.ts
 .agents/tmp/
 
 .agents/logs/
+
+# Supabase local
+supabase/.temp/

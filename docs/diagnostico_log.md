@@ -576,3 +576,18 @@ getDashboardMetrics(supabase, organizationId)
       - alerts = filter sobre supplies (current_stock < min_stock) ← regla de negocio con nombre propio
       - hasLowStockAlerts = alerts.length > 0
   → retorna el objeto final ya armado para la UI
+
+
+                                                   #### DIA 23 ####
+
+Resolver levantar el proyecto en local y entender migraciones.                                                   
+
+  20260101000000_baseline_schema.sql — 
+  la migración madre. Reconstruye TODO tu schema real (tablas, RLS, funciones, triggers) desde cero. El comentario lo dice literal: "make local development reproducible without depending on the paused cloud project." Esta es la base.
+
+Las otras 3 (inventory_schema, fixes_clients_rls, complete_visit_transaction) — ajustes incrementales posteriores al baseline (por el nombre con fecha 20260223, tres son del mismo día, posiblemente el mismo lote de trabajo).
+
+config.toml — la configuración del proyecto Supabase local (puertos, versión de Postgres, etc.). Ya existe, no hace falta crearlo.
+
+scripts/normalization.sql, snippets/fix_rls.sql, snippets/Untitled query 456.sql — esto es importante distinguirlo: NO son migraciones. 
+Son archivos SQL sueltos que probablemente ejecutaste manualmente alguna vez desde el SQL Editor de Supabase. El CLI no los toca automáticamente. Guardalo como dato, puede ser relevante después si algo no cuadra.
