@@ -1,6 +1,6 @@
 # Operational Roadmap: Jardinería CRM (Todo Verde)
 
-**Last Updated:** March 2026
+**Last Updated:** July 2026
 
 ## Status Legend
 - 🟢 **Completed:** Deployed, merged, and verified in production.
@@ -11,8 +11,8 @@
 ---
 
 ## Current Focus
-**🟡 Fixing Collision Math & Unifying Dashboard UI** 
-Stabilizing the core visit scheduling engine to prevent double-booking regressions, and standardizing the mobile dashboard presentation using a unified `VisitCard` interface instead of fragmented HTML views.
+**🟡 Centralizing Session/Org Resolution & Repository Pattern Rollout**
+Consolidating the repeated `createClient() + getUserOrganization()` pair into a single `getSupabaseWithOrg()` helper, and finishing the Repository pattern rollout across `dashboard` and `finances` modules.
 
 ---
 
@@ -25,20 +25,31 @@ Stabilizing the core visit scheduling engine to prevent double-booking regressio
 - [x] **3.4:** CRUD Unification (Schema & UI forms).
 - [x] **3.5:** Passive Geolocation: Implement zero-friction Google Maps routing.
 
+### Phase 4.1–4.2: Collision Math & Dashboard UI Unification
+- [x] Robust collision math using absolute minutes from midnight instead of string comparison.
+- [x] Dashboard unified to use `VisitCard` for pending visits, with visible `start_time`.
+
 ### Foundational Setup
 - [x] Base Next.js App Router & Tailwind CSS v4 environment.
 - [x] Direct Supabase connection (RLS, Auto-generated Types, Safe Actions).
 - [x] Robust CRUD flows using React Hook Form + Zod + BaseDrawer composition.
 - [x] AI Embedding Sidecar setup (store vector embeddings of visit observations).
+- [x] Local Supabase development environment (CLI + Docker), migrations reconstructed from remote baseline.
+- [x] Repository pattern applied to `dashboard` module (`dashboard-repository.ts` / `dashboard-service.ts`), `page.tsx` fully delegates to the service.
+
+## 🟡 In Progress
+
+### Phase 4.3: Session/Tenancy Centralization
+- [ ] Create `getSupabaseWithOrg()` helper (see `CURRENT_TASK.md`).
+- [ ] Migrate `dashboard`, `finances`, `clients` modules to use it.
+- [ ] Finish Repository pattern for `finances` module (`finance-repository.ts`), currently mid-migration.
 
 ---
 
 ## ⚪ Next Phases
 
 ### Phase 4: Operations & Scheduling Solidification
-- [ ] **4.1: Visit Constraints & Robust Collision Math.** Convert scheduling comparisons to use absolute minutes from midnight instead of brittle string evaluations. *(Active Task)*
-- [ ] **4.2: UI Standardization.** Propagate `VisitCard` usage effectively across the Dashboard, Agenda, and Historial. *(Active Task)*
-- [ ] **4.3: State Separation.** Ensure strict segregation of pending visits (editable Agenda) vs. completed visits (read-only Historial receipts).
+- [ ] **4.4: State Separation.** Ensure strict segregation of pending visits (editable Agenda) vs. completed visits (read-only Historial receipts).
 
 ### Phase 5: Applied Intelligence
 - [ ] **5.1: Semantic Search.** Expose the `/api/v1/upsert-visit-embedding` capability on the frontend, allowing operators to search past visit notes via natural language queries.
@@ -59,6 +70,7 @@ Stabilizing the core visit scheduling engine to prevent double-booking regressio
 ## Dependencies
 - **Type Safety:** All future phases depend on the Supabase local schema. After adding tables, `generate-types` must be run to update `full_db_types.ts` before frontend implementation starts.
 - **Server Actions:** Any new backend flow must use `createSafeAction` located in `src/lib/safe-action.ts` to uphold architectural invariants.
+- **Session Resolution:** Any new backend flow needing `organizationId` must use `getSupabaseWithOrg()` once implemented, not ad-hoc `createClient() + getUserOrganization()` calls.
 
 ## Blockers / Risks
 - **Timezone Drift:** Date objects submitted via forms vs. native Supabase `timestamp`/`date` types can cause collision and scheduling errors if not properly normalized.
