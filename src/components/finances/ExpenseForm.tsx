@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useEffect } from 'react'
-import { createExpense } from '@/lib/services/finance-service'
+import { createExpenseAction } from '@/app/(dashboard)/finances/actions'
 import { FormField } from '@/components/ui/FormField'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -21,7 +21,7 @@ const CATEGORY_OPTIONS = [
 export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
   const router = useRouter()
   // useActionState expects (action, initialState)
-  const [state, action, isPending] = useActionState(createExpense, {
+  const [state, action, isPending] = useActionState(createExpenseAction, {
     success: false,
     message: '',
     fieldErrors: {}

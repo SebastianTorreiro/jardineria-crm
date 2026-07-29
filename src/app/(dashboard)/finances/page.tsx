@@ -10,8 +10,7 @@ import { format, subMonths, addMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { createClient } from "@/utils/supabase/server";
-import { getUserOrganization } from "@/utils/supabase/queries";
+import { getSupabaseWithOrg } from "@/utils/supabase/session";
 
 // Force dynamic to ensure fresh metrics on every load
 export const dynamic = "force-dynamic";
@@ -21,11 +20,14 @@ interface PageProps {
 }
 
 export default async function FinancesPage({ searchParams }: PageProps) {
-  const supabase = await createClient();
-  const organizationId = await getUserOrganization(supabase);
+  const { supabase, organizationId, error } = await getSupabaseWithOrg();
   const resolvedParams = await searchParams;
 
-   if (!organizationId) return [];
+  if (error) {
+    throw error;
+  }
+
+  if (!organizationId) return [];
 
   const now = new Date();
   const monthParam = resolvedParams.month;

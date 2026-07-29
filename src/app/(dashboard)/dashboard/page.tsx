@@ -1,6 +1,5 @@
 import { getDashboardMetrics } from "@/lib/services/dashboard-service";
-import { createClient } from "@/utils/supabase/server";
-import { getUserOrganization } from "@/utils/supabase/queries";
+import { getSupabaseWithOrg } from "@/utils/supabase/session";
 import {
     AlertTriangle,
     CalendarDays,
@@ -11,8 +10,11 @@ import {
 import Link from "next/link";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const organizationId = await getUserOrganization(supabase);
+  const { supabase, organizationId, error } = await getSupabaseWithOrg();
+
+  if (error) {
+    throw error;
+  }
 
   if (!organizationId) {
     return <div className="p-8">Error: No se encontró la organización.</div>;

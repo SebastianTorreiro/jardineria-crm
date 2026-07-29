@@ -128,6 +128,7 @@ export async function getMonthlyFinancialSummary(
 }
 
 export async function createExpenseService(
+  supabase: SupabaseClient<Database>,
   organizationId: string,
   data: {
     description?: string | null;
@@ -136,7 +137,7 @@ export async function createExpenseService(
     category: "fuel" | "equipment" | "maintenance" | "other";
   },
 ) {
-  const { error } = await createExpense(data, organizationId);
+  const { error } = await createExpense(supabase, data, organizationId);
   if (error) throw error;
   return { success: true, message: "Gasto registrado correctamente" };
 }
