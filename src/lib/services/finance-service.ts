@@ -1,153 +1,189 @@
-import { SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database.types'
+import { SupabaseClient } from "@supabase/supabase-js";
+import { Database } from "@/types/database.types";
+import { createSafeAction } from "../safe-action";
+import { ExpenseSchema } from "../validations/schemas";
+import { revalidatePath } from "next/cache";
+import { createExpense } from "../repositories/finance-repository";
 
 export interface MonthlyFinancialSummary {
-    totalRevenue: number
-    totalDirectExpenses: number
-    totalGeneralExpenses: number
-    netMargin: number
+  totalRevenue: number;
+  totalDirectExpenses: number;
+  totalGeneralExpenses: number;
+  netMargin: number;
 }
 
 export interface PartnerPayoutSummary {
-    worker_id: string
-    worker_name: string
-    total_amount: number
+  worker_id: string;
+  worker_name: string;
+  total_amount: number;
 }
 
 export async function getMonthlyFinancialSummary(
-    supabase: SupabaseClient<Database>,
-    organizationId: string,
-    month: number, // 0-11
-    year: number
-): Promise<{ summary: MonthlyFinancialSummary, payouts: PartnerPayoutSummary[] }> {
-    
-    const startDate = new Date(year, month, 1).toISOString()
-    const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
+  supabase: SupabaseClient<Database>,
+  organizationId: string,
+  month: number, 
+  year: number,
+): Promise<{
+  summary: MonthlyFinancialSummary;
+  payouts: PartnerPayoutSummary[];
+}> {
+  if (!organizationId) {
+    return {
+      summary: {
+        totalRevenue: 0,
+        totalDirectExpenses: 0,
+        totalGeneralExpenses: 0,
+        netMargin: 0,
+      },
+      payouts: [],
+    };
+  }
 
-    // 1. Fetch Completed Visits (Revenue + Direct Expenses)
-    const { data: visits } = await supabase
-        .from('visits')
-        .select('total_price, direct_expenses')
-        .eq('organization_id', organizationId)
-        .eq('status', 'completed')
-        .gte('scheduled_date', startDate)
-        .lte('scheduled_date', endDate) as { data: any[] | null, error: any }
+  const startDate = new Date(year, month, 1).toISOString();
+  const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
 
-    let totalRevenue = 0
-    let totalDirectExpenses = 0
+  // 1. Fetch Completed Visits (Revenue + Direct Expenses)
+  const { data: visits } = (await supabase
+    .from("visits")
+    .select("total_price, direct_expenses")
+    .eq("organization_id", organizationId)
+    .eq("status", "completed")
+    .gte("scheduled_date", startDate)
+    .lte("scheduled_date", endDate)) as { data: any[] | null; error: any };
 
-    if (visits) {
-        visits.forEach(v => {
-            totalRevenue += v.total_price || 0
-            totalDirectExpenses += v.direct_expenses || 0
-        })
-    }
+  let totalRevenue = 0;
+  let totalDirectExpenses = 0;
 
-    // 2. Fetch General Expenses
-    const { data: expenses } = await supabase
-        .from('expenses')
-        .select('amount')
-        .eq('organization_id', organizationId)
-        .gte('date', startDate)
-        .lte('date', endDate)
+  if (visits) {
+    visits.forEach((v) => {
+      totalRevenue += v.total_price || 0;
+      totalDirectExpenses += v.direct_expenses || 0;
+    });
+  }
 
-    let totalGeneralExpenses = 0
-    if (expenses) {
-        totalGeneralExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
-    }
+  // 2. Fetch General Expenses
+  const { data: expenses } = await supabase
+    .from("expenses")
+    .select("amount")
+    .eq("organization_id", organizationId)
+    .gte("date", startDate)
+    .lte("date", endDate);
 
-    // 3. Fetch Payouts (Partner distribution)
-    const { data: payouts } = await supabase
-        .from('payouts')
-        .select(`
+  let totalGeneralExpenses = 0;
+  if (expenses) {
+    totalGeneralExpenses = expenses.reduce(
+      (sum, e) => sum + Number(e.amount),
+      0,
+    );
+  }
+
+  // 3. Fetch Payouts (Partner distribution)
+  const { data: payouts } = await supabase
+    .from("payouts")
+    .select(
+      `
             amount,
             worker_id,
             workers!inner (
                 name
             )
-        `)
-        .eq('organization_id', organizationId)
-        .gte('created_at', startDate)
-        .lte('created_at', endDate)
+        `,
+    )
+    .eq("organization_id", organizationId)
+    .gte("created_at", startDate)
+    .lte("created_at", endDate);
 
-    const payoutsMap = new Map<string, PartnerPayoutSummary>()
+  const payoutsMap = new Map<string, PartnerPayoutSummary>();
 
-    if (payouts) {
-        for (const p of payouts) {
-            const workerName = p.workers?.name || 'Unknown'
-            
-            const existing = payoutsMap.get(p.worker_id)
-            if (existing) {
-                existing.total_amount += Number(p.amount)
-            } else {
-                payoutsMap.set(p.worker_id, {
-                    worker_id: p.worker_id,
-                    worker_name: workerName,
-                    total_amount: Number(p.amount)
-                })
-            }
-        }
+  if (payouts) {
+    for (const p of payouts) {
+      const workerName = p.workers?.name || "Unknown";
+
+      const existing = payoutsMap.get(p.worker_id);
+      if (existing) {
+        existing.total_amount += Number(p.amount);
+      } else {
+        payoutsMap.set(p.worker_id, {
+          worker_id: p.worker_id,
+          worker_name: workerName,
+          total_amount: Number(p.amount),
+        });
+      }
     }
+  }
 
-    const netMargin = totalRevenue - totalDirectExpenses - totalGeneralExpenses
+  const netMargin = totalRevenue - totalDirectExpenses - totalGeneralExpenses;
 
-    return {
-        summary: {
-            totalRevenue,
-            totalDirectExpenses,
-            totalGeneralExpenses,
-            netMargin
-        },
-        payouts: Array.from(payoutsMap.values()).sort((a, b) => b.total_amount - a.total_amount)
-    }
+  return {
+    summary: {
+      totalRevenue,
+      totalDirectExpenses,
+      totalGeneralExpenses,
+      netMargin,
+    },
+    payouts: Array.from(payoutsMap.values()).sort(
+      (a, b) => b.total_amount - a.total_amount,
+    ),
+  };
 }
 
-export async function createExpense(
-    supabase: SupabaseClient<Database>,
-    organizationId: string,
-    data: {
-        description?: string | null
-        amount: number
-        date: string
-        category: 'fuel' | 'equipment' | 'maintenance' | 'other'
-    }
+export async function createExpenseService(
+  organizationId: string,
+  data: {
+    description?: string | null;
+    amount: number;
+    date: string;
+    category: "fuel" | "equipment" | "maintenance" | "other";
+  },
 ) {
-    const { error } = await supabase
-        .from('expenses')
-        .insert({
-            organization_id: organizationId,
-            description: data.description || null,
-            amount: data.amount,
-            date: data.date,
-            category: data.category,
-        })
-
-    if (error) throw error
-    return { success: true, message: 'Gasto registrado correctamente' }
+  const { error } = await createExpense(data, organizationId);
+  if (error) throw error;
+  return { success: true, message: "Gasto registrado correctamente" };
 }
 
 export async function getExpenses(
-    supabase: SupabaseClient<Database>,
-    organizationId: string,
-    month: number,
-    year: number
+  supabase: SupabaseClient<Database>,
+  organizationId: string,
+  month: number,
+  year: number,
 ) {
-    const startDate = new Date(year, month, 1).toISOString()
-    const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
+  const startDate = new Date(year, month, 1).toISOString();
+  const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
 
-    const { data } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false })
+  const { data } = await supabase
+    .from("expenses")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false });
 
-    return data || []
+  return data || [];
 }
 
+// export const createExpense = createSafeAction(
+//   ExpenseSchema,
+//   async (data, ctx) => {
+//     try {
+//       await createExpenseService(ctx.supabase, ctx.orgId, {
+//         description: data.description,
+//         amount: data.amount,
+//         date: data.date,
+//         category: data.category as any,
+//       });
+//     } catch (error) {
+//       console.error("Error creating expense:", error);
+//       return {
+//         success: false,
+//         message: "Error al registrar el gasto. Intente nuevamente.",
+//       };
+//     }
 
+//     revalidatePath("/finances");
+//     return { success: true, message: "Gasto registrado correctamente" };
+//   },
+// );
 /*
 Observaciones:
 1. La función `getMonthlyFinancialSummary` realiza varias consultas a la base de datos para obtener un resumen financiero mensual,

@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useEffect } from 'react'
-import { createExpense } from '@/app/(dashboard)/finances/actions'
+import { createExpense } from '@/lib/services/finance-service'
 import { FormField } from '@/components/ui/FormField'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
