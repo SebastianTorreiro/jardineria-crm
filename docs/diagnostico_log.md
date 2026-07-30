@@ -123,7 +123,7 @@ Request → page.tsx (presentación)
 El problema de tu CRM es que page.tsx está haciendo el trabajo de las tres capas del medio además de la presentación.
 
 
-                                                    #### DIA 5 ####
+                                                     #### DIA 5 ####
 
 
 # Naming

@@ -4,6 +4,7 @@ import { Drawer } from 'vaul'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { completeVisit, previewVisitProfit } from '@/app/(dashboard)/visits/actions'
+import { toast } from 'sonner'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -43,10 +44,16 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
     setOpen(newOpen)
     if (newOpen && workers.length === 0) {
       const { getWorkers } = await import('@/app/(dashboard)/visits/actions')
-      const data = await getWorkers()
-      setWorkers(data)
-      const partnerIds = data.filter(w => w.is_partner).map(w => w.id)
-      setSelectedWorkers(partnerIds)
+      try {
+        const data = await getWorkers()
+        setWorkers(data)
+        const partnerIds = data.filter(w => w.is_partner).map(w => w.id)
+        setSelectedWorkers(partnerIds)
+      } catch (error) {
+        console.error('CompleteVisitDrawer: failed to load workers', error)
+        setWorkers([])
+        toast.error('No se pudieron cargar los trabajadores')
+      }
     }
   }
 

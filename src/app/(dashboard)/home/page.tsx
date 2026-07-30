@@ -1,11 +1,13 @@
 
 import UserMenu from '@/components/UserMenu'
-import { createClient } from '@/utils/supabase/server'
-import { getUserOrganization } from '@/utils/supabase/queries'
+import { getSupabaseWithOrg } from '@/utils/supabase/session'
 
 export default async function HomePage() {
-  const supabase = await createClient()
-  const organizationId = await getUserOrganization(supabase)
+  const { supabase, organizationId, error } = await getSupabaseWithOrg()
+
+  if (error) {
+    throw error
+  }
 
   let visitsToday = 0
   let totalClients = 0

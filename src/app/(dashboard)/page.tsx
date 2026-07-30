@@ -1,7 +1,6 @@
 import { VisitCard } from '@/components/visits/VisitCard'
 import { getAuthUser, getDashboardMetrics, getUserDisplayName } from '@/lib/services/dashboard-service'
-import { getUserOrganization } from '@/utils/supabase/queries'
-import { createClient } from '@/utils/supabase/server'
+import { getSupabaseWithOrg } from '@/utils/supabase/session'
 import {
   AlertTriangle,
   Briefcase,
@@ -16,8 +15,12 @@ import { redirect } from 'next/navigation'
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const organizationId = await getUserOrganization(supabase)
+  const { supabase, organizationId, error } = await getSupabaseWithOrg()
+
+  if (error) {
+    console.log(error)
+    throw error
+  }
 
   if (!organizationId) {
       redirect('/onboarding')

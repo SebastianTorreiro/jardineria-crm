@@ -33,7 +33,15 @@ export async function middleware(request: NextRequest) {
   // 1. Refresh Session
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser()
+
+  // A technical failure resolving the session is NOT the same as "no session".
+  // Let the request through so the real error surfaces via the destination
+  // route's error.tsx, instead of bouncing an authenticated user to /login.
+  if (userError) {
+    return supabaseResponse
+  }
 
   const path = request.nextUrl.pathname
 

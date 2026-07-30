@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { getUserOrganization } from '@/utils/supabase/queries'
+import { getSupabaseWithOrg } from '@/utils/supabase/session'
 import { revalidatePath } from 'next/cache'
 import { createSafeAction } from '@/lib/safe-action'
 import { CreateVisitSchema, CompleteVisitSchema, UpdateVisitSchema, DeleteVisitSchema } from '@/lib/validations/schemas'
@@ -72,8 +72,9 @@ export const completeVisit = createSafeAction(CompleteVisitSchema, async (data, 
     return result
 })
 export async function getWorkers() {
-    const supabase = await createClient()
-    const organizationId = await getUserOrganization(supabase)
+    const { supabase, organizationId, error } = await getSupabaseWithOrg()
+
+    if (error) throw error
 
     if (!organizationId) {
         return []
@@ -88,8 +89,9 @@ export async function previewVisitProfit(visitId: string, totalPrice: number, di
 }
 
 export async function getVisits(start: Date, end: Date) {
-  const supabase = await createClient()
-  const organizationId = await getUserOrganization(supabase)
+  const { supabase, organizationId, error } = await getSupabaseWithOrg()
+
+  if (error) throw error
 
   if (!organizationId) {
     console.warn('getVisits: No organization found for user')

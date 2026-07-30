@@ -1,7 +1,6 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
-import { getUserOrganization } from '@/utils/supabase/queries'
+import { getSupabaseWithOrg } from '@/utils/supabase/session'
 import { revalidatePath } from 'next/cache'
 import { createSafeAction } from '@/lib/safe-action'
 import { ClientSchema, PropertySchema, ClientInput, PropertyInput } from '@/lib/validations/schemas'
@@ -17,8 +16,9 @@ import {
 export type Client = ClientInput & { id: string, org_id: string }
 
 export async function getClients(query?: string) {
-  const supabase = await createClient()
-  const organizationId = await getUserOrganization(supabase)
+  const { supabase, organizationId, error } = await getSupabaseWithOrg()
+
+  if (error) throw error
 
   if (!organizationId) {
     console.error('getClients: No organization found for user')
@@ -43,8 +43,9 @@ export const createClientAction = createSafeAction(
 })
 
 export async function getClientDetails(clientId: string) {
-  const supabase = await createClient()
-  const organizationId = await getUserOrganization(supabase)
+  const { supabase, organizationId, error } = await getSupabaseWithOrg()
+
+  if (error) throw error
 
   if (!organizationId) return null
 

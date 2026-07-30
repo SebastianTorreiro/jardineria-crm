@@ -1,7 +1,6 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
-import { getUserOrganization } from '@/utils/supabase/queries'
+import { getSupabaseWithOrg } from '@/utils/supabase/session'
 import { revalidatePath } from 'next/cache'
 import { createSafeAction } from '@/lib/safe-action'
 import { ToolSchema, SupplySchema, ToolInput, SupplyInput } from '@/lib/validations/schemas'
@@ -23,9 +22,10 @@ export type Supply = SupplyInput & { id: string, org_id: string }
 // --- TOOLS ---
 
 export async function getTools(query?: string): Promise<Tool[]> {
-  const supabase = await createClient()
-  const organizationId = await getUserOrganization(supabase)
-  
+  const { supabase, organizationId, error } = await getSupabaseWithOrg()
+
+  if (error) throw error
+
   if (!organizationId) return []
 
   const data = await getToolsService(supabase, organizationId, query)
@@ -93,9 +93,10 @@ export const updateToolStatus = createSafeAction(UpdateToolStatusSchema, async (
 // --- SUPPLIES ---
 
 export async function getSupplies(query?: string): Promise<Supply[]> {
-    const supabase = await createClient()
-    const organizationId = await getUserOrganization(supabase)
-    
+    const { supabase, organizationId, error } = await getSupabaseWithOrg()
+
+    if (error) throw error
+
     if (!organizationId) return []
   
     const data = await getSuppliesService(supabase, organizationId, query)
