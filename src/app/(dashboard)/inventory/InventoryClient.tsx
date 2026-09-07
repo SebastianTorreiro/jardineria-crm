@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { Plus, PenTool, Package } from 'lucide-react'
-import { updateToolStatus, updateSupplyStock, Tool, Supply } from './actions'
+import { updateToolStatus, Tool, Supply } from './actions'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton'
 import { BaseDrawer } from '@/components/ui/BaseDrawer'
 import { ToolForm } from '@/components/inventory/ToolForm'
 import { SupplyForm } from '@/components/inventory/SupplyForm'
+import { EditSupplyDrawer } from '@/components/inventory/EditSupplyDrawer'
 
 function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -197,20 +198,13 @@ export default function InventoryClient({ initialTools, initialSupplies }: Inven
                                     {supply.min_stock} {supply.unit}
                                 </td>
                                 <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                    <button 
-                                        onClick={async () => {
-                                            const val = prompt(`Actualizar stock de ${supply.name}:`, supply.current_stock.toString())
-                                            if (val !== null) {
-                                                const num = parseInt(val)
-                                                if (!isNaN(num)) {
-                                                    await updateSupplyStock({ id: supply.id, quantity: num })
-                                                }
-                                            }
-                                        }}
-                                        className="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
-                                    >
-                                        Actualizar
-                                    </button>
+                                    <EditSupplyDrawer supply={supply}>
+                                        <button
+                                            className="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
+                                        >
+                                            Actualizar
+                                        </button>
+                                    </EditSupplyDrawer>
                                 </td>
                             </tr>
                         ))}
@@ -231,20 +225,13 @@ export default function InventoryClient({ initialTools, initialSupplies }: Inven
                     <div key={supply.id} className="flex flex-col gap-3 rounded-xl bg-white p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100">
                         <div className="flex items-center justify-between">
                             <h3 className="font-bold text-slate-900 text-lg">{supply.name}</h3>
-                            <button 
-                                onClick={async () => {
-                                    const val = prompt(`Actualizar stock de ${supply.name}:`, supply.current_stock.toString())
-                                    if (val !== null) {
-                                        const num = parseInt(val)
-                                        if (!isNaN(num)) {
-                                            await updateSupplyStock({ id: supply.id, quantity: num })
-                                        }
-                                    }
-                                }}
-                                className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20 hover:bg-emerald-100 transition-colors"
-                            >
-                                ✏️ Stock
-                            </button>
+                            <EditSupplyDrawer supply={supply}>
+                                <button
+                                    className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20 hover:bg-emerald-100 transition-colors"
+                                >
+                                    ✏️ Stock
+                                </button>
+                            </EditSupplyDrawer>
                         </div>
                         <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                             <div className="flex flex-col">
