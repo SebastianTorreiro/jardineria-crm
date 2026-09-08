@@ -6,10 +6,10 @@ This file is the root operational manual and mandatory entry point for all AI co
 
 When documentation or instructions conflict, agents MUST prioritize in the following strict order (1 is highest):
 
-1. **`doc/CURRENT_TASK.md`**: The tactical, immediate objective. Overrides all other constraints for the immediate work scope.
-2. **`doc/PROJECT_STATE.md`**: Inflexible architectural rules, stack definitions, and non-negotiable project invariants.
+1. **`docs/CURRENT_TASK.md`**: The tactical, immediate objective. Overrides all other constraints for the immediate work scope.
+2. **`docs/PROJECT_STATE.md`**: Inflexible architectural rules, stack definitions, and non-negotiable project invariants.
 3. **`UI_GUIDELINES.md`**: Semantic color palette, component design consistency, and Tailwind v4 usage rules.
-4. **`doc/ROADMAP.md`**: Medium-term project evolution and sequencing. Do not build roadmap features unless explicitly prioritized in your current task.
+4. **`docs/ROADMAP.md`**: Medium-term project evolution and sequencing. Do not build roadmap features unless explicitly prioritized in your current task.
 5. **`.agents/skills/` (or `.agent/skills/`)**: General best practices (Next.js, Tailwind, PostgreSQL) specific to this codebase context.
 
 **Note on Document Separation**: `AGENTS.md` provides agent workflow expectations. Do not duplicate current priorities, active bugs, architecture invariants, or future features here. Those belong exclusively in their respective documents (`CURRENT_TASK.md`, `PROJECT_STATE.md`, or `ROADMAP.md`).
@@ -18,8 +18,8 @@ When documentation or instructions conflict, agents MUST prioritize in the follo
 
 Before making any tool calls to edit code or propose architectural solutions, you MUST:
 
-1. **Read `doc/CURRENT_TASK.md`** to understand exactly what the user wants you to do right now, the affected files, and the active constraints.
-2. **Read `doc/PROJECT_STATE.md`** to verify the architectural boundaries and product context for your proposed solution.
+1. **Read `docs/CURRENT_TASK.md`** to understand exactly what the user wants you to do right now, the affected files, and the active constraints.
+2. **Read `docs/PROJECT_STATE.md`** to verify the architectural boundaries and product context for your proposed solution.
 3. **Check `schema.sql` or `full_db_types.ts`** when interacting with Supabase to avoid hallucinating nonexistent tables, relations, or column names.
 4. **Read `UI_GUIDELINES.md`** if making any visual, layout, or structural UI changes.
 
@@ -38,3 +38,4 @@ Before finishing a task and returning control to the user, ensure the following 
 2. **Resilience**: Ensure new data fetches are wrapped by Suspense boundaries (`loading.tsx`) and Error Boundaries (`error.tsx`), especially when handling `useSearchParams`.
 3. **Security (RLS)**: Ensure new mutations or RPC calls respect Row Level Security (e.g., verifying `organization_id` usage in Postgres).
 4. **Tailwind Verification**: Ensure styling relies strictly on the semantic design tokens defined in `UI_GUIDELINES.md` (e.g., `bg-primary`, `bg-card`, `text-primary-foreground`) rather than arbitrary static utility values.
+5. **Testing**: any bug fix must include a regression test covering the failure mode that was fixed.
