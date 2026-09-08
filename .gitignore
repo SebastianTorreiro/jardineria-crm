@@ -54,3 +54,6 @@ next-env.d.ts
 
 # Supabase local
 supabase/.temp/
+
+# Personal diagnostic/learning notes, not project documentation
+docs/diagnostico_log.md
