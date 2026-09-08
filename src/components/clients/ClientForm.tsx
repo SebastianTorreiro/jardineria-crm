@@ -25,7 +25,7 @@ export function ClientForm({ onSuccess }: ClientFormProps) {
       router.refresh()
       onSuccess()
     }
-  }, [state.success, onSuccess, router])
+  }, [state])
 
   return (
     <form action={action} className="flex flex-col gap-5">
