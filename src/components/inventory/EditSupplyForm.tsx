@@ -29,7 +29,7 @@ export function EditSupplyForm({ supply, onSuccess, onCancel }: EditSupplyFormPr
     } else if (state.message) {
       toast.error(state.message)
     }
-  }, [state.success, state.message, onSuccess])
+  }, [state])
 
   return (
     <form action={action} className="space-y-5">

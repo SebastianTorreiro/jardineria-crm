@@ -34,7 +34,7 @@ export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
       router.refresh()
       onSuccess()
     }
-  }, [state.success, onSuccess, router])
+  }, [state])
 
   return (
     <form action={action} className="flex flex-col gap-5">

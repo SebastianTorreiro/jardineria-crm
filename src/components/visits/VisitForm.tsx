@@ -63,7 +63,7 @@ export function VisitForm({ defaultDate, onSuccess }: VisitFormProps) {
         } else if (!state.success && state.message) {
             toast.error(state.message)
         }
-    }, [state.success, state.message, onSuccess, router])
+    }, [state])
 
     return (
         <form action={action} className="flex flex-col gap-5">

@@ -27,7 +27,7 @@ export function SupplyForm({ onSuccess, onCancel }: SupplyFormProps) {
     } else if (state.message) {
       toast.error(state.message)
     }
-  }, [state.success, state.message, onSuccess])
+  }, [state])
 
   return (
     <form action={action} className="space-y-5">

@@ -58,7 +58,7 @@ export function EditVisitForm({ visit, onSuccess }: EditVisitFormProps) {
             router.refresh()
             onSuccess()
         }
-    }, [state.success, onSuccess, router])
+    }, [state])
 
     const visitDateObj = new Date(visit.scheduled_date)
     const initialDate = format(visitDateObj, 'yyyy-MM-dd')
