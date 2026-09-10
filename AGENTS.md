@@ -20,7 +20,7 @@ Before making any tool calls to edit code or propose architectural solutions, yo
 
 1. **Read `docs/CURRENT_TASK.md`** to understand exactly what the user wants you to do right now, the affected files, and the active constraints.
 2. **Read `docs/PROJECT_STATE.md`** to verify the architectural boundaries and product context for your proposed solution.
-3. **Check `schema.sql` or `full_db_types.ts`** when interacting with Supabase to avoid hallucinating nonexistent tables, relations, or column names.
+3. **Check `schema.sql` or `src/types/database.types.ts`** when interacting with Supabase to avoid hallucinating nonexistent tables, relations, or column names.
 4. **Read `UI_GUIDELINES.md`** if making any visual, layout, or structural UI changes.
 
 ## 3. High-Level Implementation Rules
@@ -34,8 +34,13 @@ Before making any tool calls to edit code or propose architectural solutions, yo
 
 Before finishing a task and returning control to the user, ensure the following constraints are met:
 
-1. **Type Safety**: No `any` types were introduced intentionally. Verify your changes against the generated database types (`full_db_types.ts`).
+1. **Type Safety**: No `any` types were introduced intentionally. Verify your changes against the generated database types (`src/types/database.types.ts`).
 2. **Resilience**: Ensure new data fetches are wrapped by Suspense boundaries (`loading.tsx`) and Error Boundaries (`error.tsx`), especially when handling `useSearchParams`.
 3. **Security (RLS)**: Ensure new mutations or RPC calls respect Row Level Security (e.g., verifying `organization_id` usage in Postgres).
 4. **Tailwind Verification**: Ensure styling relies strictly on the semantic design tokens defined in `UI_GUIDELINES.md` (e.g., `bg-primary`, `bg-card`, `text-primary-foreground`) rather than arbitrary static utility values.
 5. **Testing**: any bug fix must include a regression test covering the failure mode that was fixed.
+
+## 5. Git & Commit Discipline
+
+- **Never merge PRs.** Always leave them open for human review, in every task, not only when explicitly instructed. This applies until the project has a real test suite.
+- **`docs/AUDIT_BACKLOG.md` is exclusively Sebastián's.** If it has uncommitted changes at the start of a task, those are hand-made edits by him — never modify that file's content. Only include his existing changes in a commit as a separately identified change (its own note in the commit message), never mixed in as if it were part of the code change itself.
