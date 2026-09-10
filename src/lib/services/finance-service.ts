@@ -21,11 +21,12 @@ export interface PartnerPayoutSummary {
 export async function getMonthlyFinancialSummary(
   supabase: SupabaseClient<Database>,
   organizationId: string,
-  month: number, 
+  month: number,
   year: number,
 ): Promise<{
   summary: MonthlyFinancialSummary;
   payouts: PartnerPayoutSummary[];
+  discardedPayoutsCount: number;
 }> {
   if (!organizationId) {
     return {
@@ -36,6 +37,7 @@ export async function getMonthlyFinancialSummary(
         netMargin: 0,
       },
       payouts: [],
+      discardedPayoutsCount: 0,
     };
   }
 
@@ -84,7 +86,7 @@ export async function getMonthlyFinancialSummary(
       `
             amount,
             worker_id,
-            workers!inner (
+            workers (
                 name
             )
         `,
@@ -94,9 +96,19 @@ export async function getMonthlyFinancialSummary(
     .lte("created_at", endDate);
 
   const payoutsMap = new Map<string, PartnerPayoutSummary>();
+  let discardedPayoutsCount = 0;
 
   if (payouts) {
     for (const p of payouts) {
+      if (!p.worker_id) {
+        console.error(
+          "getMonthlyFinancialSummary: payout row with null worker_id, discarding",
+          p,
+        );
+        discardedPayoutsCount++;
+        continue;
+      }
+
       const workerName = p.workers?.name || "Unknown";
 
       const existing = payoutsMap.get(p.worker_id);
@@ -124,6 +136,7 @@ export async function getMonthlyFinancialSummary(
     payouts: Array.from(payoutsMap.values()).sort(
       (a, b) => b.total_amount - a.total_amount,
     ),
+    discardedPayoutsCount,
   };
 }
 

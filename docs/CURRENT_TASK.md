@@ -2,110 +2,104 @@
 
 ## Registro de lo ejecutado (no es el plan original — ver historial de git para el plan)
 
-Alta/gestión mínima de trabajadores, sobre el schema ya migrado
-(`share_percentage`, `is_active`, políticas RLS —
-`supabase/migrations/20260908000000_add_worker_management.sql`, aplicada
-en un commit previo de esta misma rama).
+Corregidos los 7 errores de TypeScript introducidos por la regeneración de
+`database.types.ts` en el commit de la migración de workers (`32b8350`) —
+prerequisito de merge para `feat/worker-management`, sin relación con el
+feature de trabajadores en sí. Durante el fix aparecieron 2 errores más
+(ocultos detrás de los originales) y un ajuste adicional de una query.
 
-## Paso 0 — hallazgos de la investigación previa a escribir código
+## Diagnóstico previo (confirmado antes de tocar código)
 
-- Patrón de referencia usado: `dashboard-repository.ts` + `dashboard-service.ts`
-  (repository devuelve `{ data, error }` crudo sin interpretar ni lanzar;
-  service interpreta y es la única capa que lanza).
-- `getWorkers()` (antes en `visit-service.ts`) **no** seguía ese patrón: hacía
-  la query a Supabase directo desde la capa service, sin repository
-  intermedio, y tragaba el error devolviendo `[]` en silencio. No es un caso
-  aislado — `getExpenses`/`getMonthlyFinancialSummary` en `finance-service.ts`
-  hacen lo mismo — pero no es el patrón completo que sí tiene `dashboard`. Se
-  usó el patrón de `dashboard` para el código nuevo, no el atajo existente.
-- **Corrección a la premisa original**: la tarea asumía "3 imports existentes
-  de `getWorkers()`" a actualizar (`CompleteVisitDrawer.tsx`,
-  `finance-service.ts`, `profit-service.ts`). Verificado con grep: solo
-  `CompleteVisitDrawer.tsx` (vía el wrapper en `visits/actions.ts`) llama a
-  `getWorkers()` realmente. `finance-service.ts` y `profit-service.ts`
-  consultan la tabla `workers` directo, con sus propias queries — no pasan
-  por `getWorkers()` y no se tocaron.
-- `full_db_types.ts`: confirmado sin ningún importador en `src/` (ni
-  siquiera tenía la tabla `workers` — quedó de un snapshot más viejo que
-  `src/types/database.types.ts`, que sí está actualizado). **Eliminado.**
-- `schema.sql` sigue desactualizado (no refleja `share_percentage`/
-  `is_active`). No se tocó — no estaba en el alcance — pero se usó
-  `database.types.ts` como fuente real en vez de `schema.sql` para no
-  hallucinar el shape de `workers`.
+- Aislado con `tsc --noEmit` en tres puntos: `main` (0 errores) → commit
+  `32b8350` (los 7 errores, idénticos) → esta rama con el feature de
+  workers (mismos 7, ninguno adicional). Confirma que los introdujo la
+  regeneración de tipos de esa migración, no algo posterior.
+- `next build` no se pudo correr de punta a punta en este entorno (bloqueo
+  de red del sandbox hacia Google Fonts, no relacionado al proyecto).
+  `next.config.ts` no tiene `typescript.ignoreBuildErrors`, así que estos
+  errores sí bloquean un build de producción real.
 
-## Decisiones tomadas en el camino (confirmadas con Sebastián antes de implementar)
+## Los 7 errores originales — causa de negocio y estrategia aplicada por caso
 
-1. `getWorkers()` trae por default solo `is_active = true`, con parámetro
-   `includeInactive` (default `false`) para incluir inactivos.
-2. Alcance recortado explícitamente:
-   - Construido: `updateWorker()` en repository + service (misma firma que
-     `createWorker`), **sin ninguna UI que lo llame todavía** — queda listo
-     para la siguiente tarea (edición de `share_percentage`/`is_active`).
-   - Construido: página mínima `/workers` — listado en cards responsivas
-     (nombre, badge Socio, badge Activo/Inactivo) + botón para abrir el
-     drawer de alta. Sin edición, sin checkbox de mostrar inactivos.
-   - `WorkerSchema` cubre solo alta (`name`, `is_partner`). No incluye
-     `share_percentage`/`is_active` — eso lo valida el schema de la tarea
-     de edición.
+1. **`finances/page.tsx` — `Expense.created_at`**: columna sin `NOT NULL`
+   pero nunca seteada a null por ningún código, y **nunca se muestra en
+   la UI** (verificado, no aparece en `ExpenseList.tsx`). Estrategia:
+   ensanchar el tipo a `string | null`, sin fallback — no hay nada que
+   mostrar.
+2. **`inventory/actions.ts` — `item.status` (tools)**: `createTool`
+   siempre setea un valor explícito, nunca null en la práctica.
+   Estrategia: ensanchar `mapDbStatusToToolStatus` a aceptar
+   `string | null`, reutilizando el `default: return 'ok'` que ya existía
+   para valores no reconocidos — sin lógica nueva.
+3. **`inventory/actions.ts` + `dashboard-service.ts` — `current_stock`/
+   `min_stock` (supplies)**: mismo patrón, `createSupply` siempre los
+   setea. Estrategia: coalescer a `0` en los dos puntos de lectura — es
+   el mismo valor que ya usa el `DEFAULT 0` de la columna, no un valor
+   inventado.
+4. **`finance-service.ts` — `p.worker_id` (payouts)**: `ON DELETE CASCADE`
+   hace que un worker borrado se lleve el payout entero, nunca lo deja en
+   null — solo podría pasar por un insert corrupto/manual. Estrategia
+   distinta a las anteriores: descartar la fila (`continue` + 
+   `console.error`) en vez de inventar un `worker_id`, **más un badge
+   visible en `ProfitDistribution.tsx`** ("⚠ N pago(s) con datos
+   inconsistentes excluido(s) del cálculo", solo si `discardedCount > 0`)
+   — pedido explícito para que no quede invisible si pasa. Requirió
+   agregar `discardedPayoutsCount` al retorno de
+   `getMonthlyFinancialSummary` y pasarlo por `finances/page.tsx`.
 
-## Archivos tocados
+## 2 errores adicionales (aparecían ocultos detrás de los originales)
 
-**Nuevos:**
-- `src/lib/repositories/worker-repository.ts`
-- `src/lib/services/worker-service.ts`
-- `src/app/(dashboard)/workers/actions.ts` (`getWorkers`, `createWorker`)
-- `src/app/(dashboard)/workers/page.tsx`, `loading.tsx`, `error.tsx`
-- `src/components/workers/WorkerForm.tsx`, `NewWorkerDrawer.tsx`, `WorkerCard.tsx`
-- `WorkerSchema` en `src/lib/validations/schemas.ts`
+TypeScript solo reporta el primer campo incompatible de un objeto — al
+corregir `current_stock`/`min_stock` de `Supply`, aparecieron dos más en
+la misma línea (`inventory/actions.ts:104`), mismo patrón que el caso 3,
+mismas estrategias:
+- `unit` (supplies): coalescer a `'unidades'` (el `DEFAULT` real de la
+  columna).
+- `org_id` (`Tool`/`Supply`, viene de `organization_id`): **no se usa en
+  ningún componente** (mismo caso que `created_at`) — se ensanchó el tipo
+  a `string | null` directamente en las definiciones de `Tool`/`Supply`
+  (`inventory/actions.ts`) en vez de parchear cada `.map()`.
 
-**Editados:**
-- `src/lib/services/visit-service.ts` — se quitó `getWorkers()`.
-- `src/app/(dashboard)/visits/actions.ts` — se quitó el wrapper `getWorkers()`.
-- `src/components/visits/CompleteVisitDrawer.tsx` — el import dinámico de
-  `getWorkers` ahora apunta a `@/app/(dashboard)/workers/actions`.
+## Ajuste adicional: `workers!inner` → `workers` en `finance-service.ts`
 
-**Eliminados:**
-- `full_db_types.ts` (raíz).
-
-## Decisión no resuelta, señalada para revisión
-
-La ruta `/workers` **no está enlazada** desde el nav inferior
-(`layout.tsx`) — solo es alcanzable por URL directa. No se agregó el link
-para no tocar un archivo compartido fuera del alcance explícito de esta
-tarea ni asumir una decisión de UX/navegación sin consultar. Pendiente de
-decidir en una próxima tarea.
+Al probar el caso 4 manualmente (insertando una fila de `payouts` con
+`worker_id: null` directo por API), el badge no aparecía. Causa: el
+`.select("... workers!inner(name)")` original hace que Postgrest excluya
+la fila a nivel de base de datos — nunca llegaba al código JS que la
+tenía que descartar. Cambiado a `workers(name)` (left join). Verificado
+antes de aplicar:
+- Único acceso a `p.workers` en todo el proyecto es
+  `finance-service.ts:112` (`p.workers?.name`), ya con optional
+  chaining — no había otros consumidores desprotegidos que el cambio de
+  nullability pudiera romper.
+- `tsc --noEmit` no se quejó tras el cambio — la nullability de una
+  relación joineada la infiere el cliente tipado de Supabase a partir del
+  string de la query en cada llamada, no de un campo fijo en
+  `database.types.ts`. No hizo falta regenerar tipos.
 
 ## Verificación realizada
 
-- `tsc --noEmit`: limpio en todos los archivos de esta tarea. **Se encontraron
-  6 errores de TypeScript preexistentes, no relacionados**, en
-  `finances/page.tsx`, `inventory/actions.ts` (x2), `dashboard-service.ts`
-  (x2) y `finance-service.ts` (x2) — causados por la regeneración de
-  `database.types.ts` del commit de la migración (nullability más estricta
-  en columnas que antes no la tenían). Confirmado con `git stash` que ya
-  existían antes de esta tarea. No se tocaron — fuera de alcance — pero
-  quedan señalados acá porque rompen el build de tipos del proyecto entero.
-- `eslint`: limpio en los archivos nuevos/editados de esta tarea (aparte del
-  warning esperado de `exhaustive-deps` en `WorkerForm.tsx`, igual al patrón
-  ya aprobado en la tarea del toast en cascada). Los demás errores que
-  aparecen al lintear `CompleteVisitDrawer.tsx`/`visit-service.ts` son
-  preexistentes (`any` sin relación a esta tarea).
-- Prueba manual end-to-end en navegador (Supabase local + usuario de prueba
-  creado y luego borrado): alta de trabajador (single toast, sin
-  duplicados) → creación de cliente/visita → **completar la visita
-  seleccionando el trabajador recién creado — funciona, ya no está
-  bloqueado** → visita pasa a Historial como "Cobrado" → `/finances`
-  muestra el ingreso y la distribución de utilidades correcta con el
-  trabajador real. Confirma que los dos consumidores reales de la tabla
-  `workers` (`profit-service.ts`, `finance-service.ts`) siguen funcionando
-  después de la mudanza.
-- **No verificado** (queda para la tarea de edición): rechazo de RLS al
-  intentar `updateWorker()` como member no-owner — no hay UI en esta tarea
-  que ejercite ese camino.
-- Sin framework de testing instalado (ítem 003 de `AUDIT_BACKLOG.md`), no
-  aplica test automatizado de regresión.
+- `tsc --noEmit`: limpio (0 errores) tras los 4 archivos + los 2 casos
+  adicionales + el cambio de join.
+- `eslint`: limpio en todos los archivos tocados (deuda preexistente ya
+  documentada en el commit del feature, sin cambios).
+- Prueba manual de las 3 pantallas (Supabase local + usuario de prueba):
+  Dashboard (alerta de stock bajo con valores reales, sin ningún "null"
+  visible), Inventario (alta de herramienta e insumo, estado y stock
+  correctos), Finanzas (gasto nuevo en la lista, sin badge cuando no hay
+  datos corruptos). Caso 4 probado de verdad, no solo por tipos: insertada
+  una fila de `payouts` con `worker_id: null` por API — el badge
+  "⚠ 1 pago con datos inconsistentes excluido del cálculo" apareció
+  correctamente en `/finances`, sin afectar el resto del cálculo.
+- Limpieza de datos de prueba: la fila de `payouts` de test, y el usuario/
+  organización de prueba completos (`organizations`, `organization_members`,
+  `tools`, `supplies`, `expenses`) — borrado del usuario de auth no hizo
+  cascada sobre el resto, quedaron huérfanos hasta que se borraron
+  explícitamente.
 
 ## Flujo git
 
-Rama `feat/worker-management`. Commit de este trabajo, push, PR abierto.
-**No mergeado** — queda para revisión de Sebastián.
+Mismo branch `feat/worker-management`, en un commit separado del feature:
+`fix: handle nullable columns exposed by regenerated database types`.
+Push. PR único de la rama recién con los 3 commits (feature de workers,
+fix de AGENTS.md, este fix) confirmados y pusheados. No mergear.

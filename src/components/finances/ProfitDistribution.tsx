@@ -1,4 +1,4 @@
-import { Wallet, Users, Landmark, TrendingUp } from 'lucide-react'
+import { Wallet, Users, Landmark, TrendingUp, AlertTriangle } from 'lucide-react'
 
 interface PartnerSummary {
     name: string
@@ -11,9 +11,10 @@ interface ProfitDistributionProps {
         worker_name: string
         total_amount: number
     }[] | null
+    discardedCount?: number
 }
 
-export function ProfitDistribution({ summary }: ProfitDistributionProps) {
+export function ProfitDistribution({ summary, discardedCount = 0 }: ProfitDistributionProps) {
     if (!summary) return null
 
     return (
@@ -22,6 +23,14 @@ export function ProfitDistribution({ summary }: ProfitDistributionProps) {
                 <Users size={20} className="text-emerald-600" />
                 Distribución de Utilidades
             </h2>
+
+            {discardedCount > 0 && (
+                <p className="flex items-center gap-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    <AlertTriangle size={16} className="shrink-0" />
+                    {discardedCount} pago{discardedCount > 1 ? 's' : ''} con datos inconsistentes
+                    excluido{discardedCount > 1 ? 's' : ''} del cálculo
+                </p>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Partner Earnings */}

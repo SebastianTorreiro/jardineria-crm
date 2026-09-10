@@ -16,8 +16,8 @@ import {
 } from '@/lib/services/inventory-service'
 
 // --- INTERFACES (Mapped from Schema) ---
-export type Tool = ToolInput & { id: string, org_id: string }
-export type Supply = SupplyInput & { id: string, org_id: string }
+export type Tool = ToolInput & { id: string, org_id: string | null }
+export type Supply = SupplyInput & { id: string, org_id: string | null }
 
 // --- TOOLS ---
 
@@ -41,7 +41,7 @@ export async function getTools(query?: string): Promise<Tool[]> {
 }
 
 // Mappers
-function mapDbStatusToToolStatus(dbStatus: string): 'ok' | 'service' | 'broken' {
+function mapDbStatusToToolStatus(dbStatus: string | null): 'ok' | 'service' | 'broken' {
     switch (dbStatus) {
         case 'available': return 'ok'
         case 'maintenance': return 'service'
@@ -104,9 +104,9 @@ export async function getSupplies(query?: string): Promise<Supply[]> {
     return (data || []).map((item) => ({
         id: item.id,
         name: item.name,
-        current_stock: item.current_stock,
-        min_stock: item.min_stock,
-        unit: item.unit,
+        current_stock: item.current_stock ?? 0,
+        min_stock: item.min_stock ?? 0,
+        unit: item.unit ?? 'unidades',
         org_id: item.organization_id
     }))
 }
