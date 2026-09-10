@@ -11,7 +11,6 @@ import {
   updateVisit as updateVisitService,
   deleteVisit as deleteVisitService,
   completeVisit as completeVisitService,
-  getWorkers as getWorkersService,
   getVisits as getVisitsService
 } from '@/lib/services/visit-service'
 
@@ -71,17 +70,6 @@ export const completeVisit = createSafeAction(CompleteVisitSchema, async (data, 
 
     return result
 })
-export async function getWorkers() {
-    const { supabase, organizationId, error } = await getSupabaseWithOrg()
-
-    if (error) throw error
-
-    if (!organizationId) {
-        return []
-    }
-
-    return getWorkersService(supabase, organizationId)
-}
 export async function previewVisitProfit(visitId: string, totalPrice: number, directExpenses: number, workerIds: string[]) {
     const supabase = await createClient()
     const breakdown = await calculateProfitSplit(supabase, visitId, totalPrice, directExpenses, workerIds)

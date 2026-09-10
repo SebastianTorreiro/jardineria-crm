@@ -81,6 +81,14 @@ export const DeleteVisitSchema = z.object({
 
 export type DeleteVisitInput = z.infer<typeof DeleteVisitSchema>;
 
+// --- WORKERS ---
+export const WorkerSchema = z.object({
+  name: z.string().trim().min(1, { message: "El nombre es obligatorio" }),
+  is_partner: z.string().optional().transform((val) => val === 'on'),
+});
+
+export type WorkerInput = z.infer<typeof WorkerSchema>;
+
 export const CompleteVisitSchema = z.object({
   id: z.string().trim().toLowerCase().uuid(),
   total_price: z.coerce.number().min(0),
