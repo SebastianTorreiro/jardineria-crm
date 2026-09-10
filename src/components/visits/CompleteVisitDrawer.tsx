@@ -43,7 +43,7 @@ export function CompleteVisitDrawer({ visit, children }: CompleteVisitDrawerProp
   async function handleOpenChange(newOpen: boolean) {
     setOpen(newOpen)
     if (newOpen && workers.length === 0) {
-      const { getWorkers } = await import('@/app/(dashboard)/visits/actions')
+      const { getWorkers } = await import('@/app/(dashboard)/workers/actions')
       try {
         const data = await getWorkers()
         setWorkers(data)

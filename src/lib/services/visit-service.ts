@@ -185,16 +185,6 @@ export async function completeVisit(
     }
 }
 
-export async function getWorkers(supabase: SupabaseClient<Database>, organizationId: string) {
-    const { data, error } = await supabase
-        .from('workers')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .order('name')
-    if (error) return []
-    return data || []
-}
-
 export async function getVisits(
   supabase: SupabaseClient<Database>,
   organizationId: string,

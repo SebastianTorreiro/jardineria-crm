@@ -91,7 +91,7 @@ export default async function FinancesPage({ searchParams }: PageProps) {
         <SummaryCard summary={summary.summary} />
 
         {/* Profit Distribution */}
-        <ProfitDistribution summary={summary.payouts} />
+        <ProfitDistribution summary={summary.payouts} discardedCount={summary.discardedPayoutsCount} />
 
         {/* Expense List */}
         <div className="mt-8">

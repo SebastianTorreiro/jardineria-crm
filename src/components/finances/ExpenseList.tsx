@@ -3,7 +3,7 @@ import { es } from 'date-fns/locale'
 
 interface Expense {
   id: string
-  created_at: string
+  created_at: string | null
   description: string | null
   amount: number
   date: string

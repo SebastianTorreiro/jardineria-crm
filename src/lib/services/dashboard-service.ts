@@ -39,7 +39,9 @@ export async function getDashboardMetrics(
       0,
     ) ?? 0;
   const alerts =
-    lowStockSupplies.data?.filter((s) => s.current_stock < s.min_stock) || [];
+    (lowStockSupplies.data || [])
+      .map((s) => ({ ...s, current_stock: s.current_stock ?? 0, min_stock: s.min_stock ?? 0 }))
+      .filter((s) => s.current_stock < s.min_stock);
 
   return {
     totalClients,
