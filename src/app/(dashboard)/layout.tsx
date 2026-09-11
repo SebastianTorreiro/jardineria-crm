@@ -1,6 +1,7 @@
 
-import { Home, Users, Calendar, DollarSign, Briefcase } from 'lucide-react'
+import { Home, Users, Calendar, DollarSign } from 'lucide-react'
 import Link from 'next/link'
+import { MoreMenuDrawer } from '@/components/ui/MoreMenuDrawer'
 
 export default function DashboardLayout({
   children,
@@ -35,19 +36,13 @@ export default function DashboardLayout({
             <span className="text-xs font-medium">Agenda</span>
           </Link>
           <Link
-            href="/inventory"
-            className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
-          >
-            <Briefcase className="h-6 w-6" />
-            <span className="text-xs font-medium">Inventario</span>
-          </Link>
-          <Link
             href="/finances"
             className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
           >
             <DollarSign className="h-6 w-6" />
             <span className="text-xs font-medium">Finanzas</span>
           </Link>
+          <MoreMenuDrawer />
         </div>
       </nav>
     </div>

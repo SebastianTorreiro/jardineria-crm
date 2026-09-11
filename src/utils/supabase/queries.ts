@@ -38,3 +38,37 @@ export const getUserOrganization = async (
 
   return data?.organization_id ?? null;
 };
+
+export const getUserRole = async (
+  supabase: SupabaseClient<Database>,
+  organizationId: string,
+): Promise<string | null> => {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("organization_id", organizationId)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return null;
+    }
+    throw error;
+  }
+
+  return data?.role ?? null;
+};

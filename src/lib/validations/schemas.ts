@@ -89,6 +89,16 @@ export const WorkerSchema = z.object({
 
 export type WorkerInput = z.infer<typeof WorkerSchema>;
 
+export const EditWorkerSchema = z.object({
+  id: z.string().trim().toLowerCase().uuid(),
+  name: z.string().trim().min(1, { message: "El nombre es obligatorio" }),
+  share_percentage: z.coerce.number().min(0).max(100),
+  is_active: z.string().optional().transform((val) => val === 'on'),
+  is_partner: z.string().optional().transform((val) => val === 'on'),
+});
+
+export type EditWorkerInput = z.infer<typeof EditWorkerSchema>;
+
 export const CompleteVisitSchema = z.object({
   id: z.string().trim().toLowerCase().uuid(),
   total_price: z.coerce.number().min(0),
