@@ -85,7 +85,7 @@ export async function calculateProfitSplit(
 ): Promise<ProfitDistribution[]> {
     const { data: workers, error: workersError } = await supabase
         .from('workers')
-        .select('id, name, is_partner')
+        .select('id, name, is_partner, share_percentage')
         .in('id', selectedWorkerIds)
 
     if (workersError || !workers) {
@@ -93,28 +93,17 @@ export async function calculateProfitSplit(
         return []
     }
 
-    // Map to DistributionWorker with business rules for points
+    // Only partners share the net margin. share_percentage is used as a
+    // relative weight, renormalized to 100% among the selected partners for
+    // this visit — same behavior as the previous name-based hardcode, just
+    // sourced from the real column instead.
     const distributionWorkers: DistributionWorker[] = workers
-        .filter(w => w.is_partner) // Only partners share the net margin
-        .map(w => {
-            let points = 0
-            const nameLower = w.name.toLowerCase()
-            
-            // Business rule defaults
-            if (nameLower.includes('theo')) {
-                points = 60
-            } else if (nameLower.includes('sebastian') || nameLower.includes('sebastián')) {
-                points = 40
-            } else {
-                points = 50 // Default for other potential partners
-            }
-
-            return {
-                id: w.id,
-                name: w.name,
-                points
-            }
-        })
+        .filter(w => w.is_partner)
+        .map(w => ({
+            id: w.id,
+            name: w.name,
+            points: w.share_percentage
+        }))
 
     return calculateVisitDistribution(totalPrice, directExpenses, distributionWorkers)
 }

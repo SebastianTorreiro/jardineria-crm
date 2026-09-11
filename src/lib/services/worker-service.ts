@@ -34,8 +34,10 @@ export async function updateWorker(
   organizationId: string,
   workerId: string,
   data: {
+    name?: string
     share_percentage?: number
     is_active?: boolean
+    is_partner?: boolean
   }
 ) {
   const { error } = await updateWorkerRepo(supabase, organizationId, workerId, data)
