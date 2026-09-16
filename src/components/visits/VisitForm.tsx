@@ -35,8 +35,16 @@ export function VisitForm({ defaultDate, onSuccess }: VisitFormProps) {
         const timeInput = formData.get('time') as string
 
         if (dateInput) {
+            const parsedDate = new Date(`${dateInput}T12:00:00`)
+            if (isNaN(parsedDate.getTime())) {
+                return {
+                    success: false,
+                    message: 'Fecha inválida. Revisá el año ingresado.',
+                    fieldErrors: { date: ['Fecha inválida. Revisá el año ingresado.'] }
+                }
+            }
              // Send as local string 'YYYY-MM-DD' dynamically parsing the day at Noon to ensure safe parsing
-            const fullDateStr = format(new Date(`${dateInput}T12:00:00`), 'yyyy-MM-dd')
+            const fullDateStr = format(parsedDate, 'yyyy-MM-dd')
             formData.set('date', fullDateStr)
         }
         

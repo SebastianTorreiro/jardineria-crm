@@ -40,7 +40,15 @@ export function EditVisitForm({ visit, onSuccess }: EditVisitFormProps) {
         formData.append('id', visit.id)
         const dateInput = formData.get('date_day') as string
         if (dateInput) {
-            const fullDateStr = format(new Date(`${dateInput}T12:00:00`), 'yyyy-MM-dd')
+            const parsedDate = new Date(`${dateInput}T12:00:00`)
+            if (isNaN(parsedDate.getTime())) {
+                return {
+                    success: false,
+                    message: 'Fecha inválida. Revisá el año ingresado.',
+                    fieldErrors: { date: ['Fecha inválida. Revisá el año ingresado.'] }
+                }
+            }
+            const fullDateStr = format(parsedDate, 'yyyy-MM-dd')
             formData.set('date', fullDateStr)
         }
         return updateVisit(prevState, formData)
