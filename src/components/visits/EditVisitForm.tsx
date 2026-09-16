@@ -70,7 +70,10 @@ export function EditVisitForm({ visit, onSuccess }: EditVisitFormProps) {
 
     const visitDateObj = new Date(visit.scheduled_date)
     const initialDate = format(visitDateObj, 'yyyy-MM-dd')
-    const initialTime = visit.start_time || format(visitDateObj, 'HH:mm')
+    // Postgres/PostgREST always serialize a `time` column with seconds
+    // (e.g. "14:30:00"), but a plain <input type="time"> (no `step`
+    // override) only accepts HH:mm — trim to match or the field renders blank.
+    const initialTime = visit.start_time?.slice(0, 5) || format(visitDateObj, 'HH:mm')
 
     return (
         <form action={action} className="flex flex-col gap-5">
