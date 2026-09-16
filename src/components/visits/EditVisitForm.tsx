@@ -40,7 +40,15 @@ export function EditVisitForm({ visit, onSuccess }: EditVisitFormProps) {
         formData.append('id', visit.id)
         const dateInput = formData.get('date_day') as string
         if (dateInput) {
-            const fullDateStr = format(new Date(`${dateInput}T12:00:00`), 'yyyy-MM-dd')
+            const parsedDate = new Date(`${dateInput}T12:00:00`)
+            if (isNaN(parsedDate.getTime())) {
+                return {
+                    success: false,
+                    message: 'Fecha inválida. Revisá el año ingresado.',
+                    fieldErrors: { date: ['Fecha inválida. Revisá el año ingresado.'] }
+                }
+            }
+            const fullDateStr = format(parsedDate, 'yyyy-MM-dd')
             formData.set('date', fullDateStr)
         }
         return updateVisit(prevState, formData)
@@ -62,7 +70,10 @@ export function EditVisitForm({ visit, onSuccess }: EditVisitFormProps) {
 
     const visitDateObj = new Date(visit.scheduled_date)
     const initialDate = format(visitDateObj, 'yyyy-MM-dd')
-    const initialTime = visit.start_time || format(visitDateObj, 'HH:mm')
+    // Postgres/PostgREST always serialize a `time` column with seconds
+    // (e.g. "14:30:00"), but a plain <input type="time"> (no `step`
+    // override) only accepts HH:mm — trim to match or the field renders blank.
+    const initialTime = visit.start_time?.slice(0, 5) || format(visitDateObj, 'HH:mm')
 
     return (
         <form action={action} className="flex flex-col gap-5">

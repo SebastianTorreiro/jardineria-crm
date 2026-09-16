@@ -6,14 +6,19 @@ import { updateClient } from '@/app/(dashboard)/clients/actions'
 import { Edit, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { FormField } from '@/components/ui/FormField'
+import { Database } from '@/types/database.types'
+
+type ClientRow = Database['public']['Tables']['clients']['Row']
+type PropertyRow = Database['public']['Tables']['properties']['Row']
 
 interface ClientEditDrawerProps {
-    client: any
+    client: ClientRow
+    properties: PropertyRow[]
     children: React.ReactNode
 }
 
-export function ClientEditDrawer({ client, children }: ClientEditDrawerProps) {
-    const primaryProperty = client?.properties?.[0]
+export function ClientEditDrawer({ client, properties, children }: ClientEditDrawerProps) {
+    const primaryProperty = properties?.[0]
     const [open, setOpen] = useState(false)
     const [state, action, isPending] = useActionState(updateClient, {
         success: false,

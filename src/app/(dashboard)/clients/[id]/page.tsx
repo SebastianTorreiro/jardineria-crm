@@ -65,7 +65,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
             )}
           </div>
           
-          <ClientEditDrawer client={client}>
+          <ClientEditDrawer client={client} properties={properties}>
             <button className="flex items-center gap-2 rounded-lg bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-200 transition-colors">
                 <Edit size={16} />
                 Editar
