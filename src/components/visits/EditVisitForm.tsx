@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { FormField } from '@/components/ui/FormField'
+import { parseLocalDate } from '@/utils/date-helpers'
 
 interface EditVisitFormProps {
     visit: any
@@ -68,7 +69,10 @@ export function EditVisitForm({ visit, onSuccess }: EditVisitFormProps) {
         }
     }, [state])
 
-    const visitDateObj = new Date(visit.scheduled_date)
+    // scheduled_date is a date-only string (e.g. "2026-09-16"). new Date(...)
+    // parses that as UTC midnight, which formats one day back in any
+    // timezone behind UTC — parseLocalDate treats it as local midnight instead.
+    const visitDateObj = parseLocalDate(visit.scheduled_date)
     const initialDate = format(visitDateObj, 'yyyy-MM-dd')
     // Postgres/PostgREST always serialize a `time` column with seconds
     // (e.g. "14:30:00"), but a plain <input type="time"> (no `step`
