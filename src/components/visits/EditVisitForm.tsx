@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { FormField } from '@/components/ui/FormField'
+import { parseLocalDate } from '@/utils/date-helpers'
 
 interface EditVisitFormProps {
     visit: any
@@ -18,16 +19,18 @@ export function EditVisitForm({ visit, onSuccess }: EditVisitFormProps) {
     const router = useRouter()
     const [clients, setClients] = useState<any[]>([])
     const [selectedClientId, setSelectedClientId] = useState<string>('')
+    const [selectedPropertyId, setSelectedPropertyId] = useState<string>('')
 
     useEffect(() => {
         getClients('').then(data => {
             if (data) {
                 setClients(data)
-                const matchedClient = data.find(c => 
+                const matchedClient = data.find(c =>
                     c.properties?.some((p: any) => p.id === visit.property_id)
                 )
                 if (matchedClient) {
                     setSelectedClientId(matchedClient.id)
+                    setSelectedPropertyId(visit.property_id)
                 }
             }
         })
@@ -35,6 +38,18 @@ export function EditVisitForm({ visit, onSuccess }: EditVisitFormProps) {
 
     const selectedClient = clients.find(c => c.id === selectedClientId)
     const clientProperties = selectedClient?.properties || []
+
+    // Switching client mid-form invalidates the current property selection
+    // unless the new client happens to also have it (e.g. picking the
+    // original client back) — never silently submit a property_id that
+    // doesn't belong to the selected client.
+    const handleClientChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newClientId = e.target.value
+        setSelectedClientId(newClientId)
+        const newClientProperties = clients.find(c => c.id === newClientId)?.properties || []
+        const stillValid = newClientProperties.some((p: { id: string }) => p.id === selectedPropertyId)
+        setSelectedPropertyId(stillValid ? selectedPropertyId : '')
+    }
 
     const formAction = async (prevState: any, formData: FormData) => {
         formData.append('id', visit.id)
@@ -68,7 +83,10 @@ export function EditVisitForm({ visit, onSuccess }: EditVisitFormProps) {
         }
     }, [state])
 
-    const visitDateObj = new Date(visit.scheduled_date)
+    // scheduled_date is a date-only string (e.g. "2026-09-16"). new Date(...)
+    // parses that as UTC midnight, which formats one day back in any
+    // timezone behind UTC — parseLocalDate treats it as local midnight instead.
+    const visitDateObj = parseLocalDate(visit.scheduled_date)
     const initialDate = format(visitDateObj, 'yyyy-MM-dd')
     // Postgres/PostgREST always serialize a `time` column with seconds
     // (e.g. "14:30:00"), but a plain <input type="time"> (no `step`
@@ -90,7 +108,7 @@ export function EditVisitForm({ visit, onSuccess }: EditVisitFormProps) {
                     id="client"
                     className="block w-full rounded-lg border-slate-200 bg-white shadow-sm ring-emerald-500/20 transition-all duration-200 sm:text-sm px-3 py-2 border outline-none hover:border-slate-300 focus:border-emerald-500 focus:ring-2 h-[42px]"
                     value={selectedClientId}
-                    onChange={(e) => setSelectedClientId(e.target.value)}
+                    onChange={handleClientChange}
                     required
                 >
                     <option value="">Seleccionar Cliente...</option>
@@ -106,7 +124,8 @@ export function EditVisitForm({ visit, onSuccess }: EditVisitFormProps) {
                 <select
                     name="property_id"
                     id="property_id"
-                    defaultValue={visit.property_id}
+                    value={selectedPropertyId}
+                    onChange={(e) => setSelectedPropertyId(e.target.value)}
                     className={`block w-full rounded-lg border-slate-200 bg-white shadow-sm ring-emerald-500/20 transition-all duration-200 sm:text-sm px-3 py-2 border outline-none hover:border-slate-300 focus:border-emerald-500 focus:ring-2 h-[42px] ${state.fieldErrors?.property_id ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''}`}
                     required
                     disabled={!selectedClientId}
